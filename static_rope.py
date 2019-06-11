@@ -168,7 +168,7 @@ class Game(DirectObject):
 #      np1 = make(Point3(2, 0, 0))
 
     # Box
-    shape = BulletBoxShape(Vec3(2, 2, 2))
+    shape = BulletBoxShape(Vec3(1, 1, 1))
 
     boxNP = self.worldNP.attachNewNode(BulletRigidBodyNode('Box'))
     boxNP.node().setMass(50.0)
@@ -182,7 +182,7 @@ class Game(DirectObject):
 
     visNP = loader.loadModel('assets/box.egg')
     visNP.clearModelNodes()
-    visNP.setScale(4, 4, 4)
+    visNP.setScale(2, 2, 2)
     visNP.reparentTo(boxNP)
     render.ls()
 

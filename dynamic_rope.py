@@ -269,7 +269,7 @@ class Game(DirectObject):
       visNode.setUvMode(RopeNode.UVParametric)
       visNode.setNumSubdiv(4)
       visNode.setNumSlices(8)
-      visNode.setThickness(0.6)
+      visNode.setThickness(0.4)
       visNP = self.worldNP.attachNewNode(visNode)
       #visNP = bodyNP.attachNewNode(visNode) # --> renders with offset!!!
       visNP.setTexture(loader.loadTexture('assets/bowl.jpg'))
