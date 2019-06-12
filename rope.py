@@ -8,10 +8,7 @@ import cv2
 import direct.directbase.DirectStart
 from direct.showbase.DirectObject import DirectObject
 
-from panda3d.core import AmbientLight, DirectionalLight, FrameBufferProperties, WindowProperties, \
-Filename, Vec3, Vec4, CollisionNode, CollisionRay, CollisionHandlerQueue, CollisionTraverser, \
-Point3, TransformState, BitMask32, GeomNode, RopeNode, NurbsCurveEvaluator, GraphicsPipe, GraphicsOutput, \
-Texture, loadPrcFileData
+from panda3d.core import *
 
 from panda3d.bullet import BulletWorld, BulletPlaneShape, BulletBoxShape, BulletRigidBodyNode, \
 BulletDebugNode, BulletSoftBodyNode, BulletSoftBodyConfig
@@ -113,14 +110,17 @@ class Game(DirectObject):
     self.depthBuffer.addRenderTexture(self.depthTex,
         GraphicsOutput.RTMCopyRam, GraphicsOutput.RTPDepth)
     lens = base.camNode.getLens()
-    print(lens.getProjectionMat())
-    # the near and far clipping distances can be changed if desired
-    # lens.setNear(5.0)
-    # lens.setFar(500.0)
+    self.K = np.zeros((3, 3))
+    self.K[0, 0] = lens.getFocalLength()
+    self.K[1, 1] = lens.getFocalLength()
+    self.K[2, 2] = 1.0
+    self.K[0, 2] = 320.0
+    self.K[1, 2] = 240.0
     self.depthCam = base.makeCamera(self.depthBuffer,
         lens=lens,
         scene=render)
     self.depthCam.reparentTo(base.cam)
+
 
   def get_camera_image(self, requested_format=None):
       """
@@ -224,7 +224,7 @@ class Game(DirectObject):
         	cv2.imwrite("images/{0:06d}_rgb.jpg".format(self.scene_curr), cv2.resize(image, (640, 480)))
         	cv2.imwrite("images/{0:06d}_depth.png".format(self.scene_curr), cv2.resize(depth_image, (640, 480)))
         	self.scene_curr += 1
-        
+
         return task.cont
 
   def setup(self):
@@ -247,7 +247,7 @@ class Game(DirectObject):
 
     # Softbody
     def make(p1, offset, fixed):
-      n = 8 
+      n = 8
       p2 = p1 + offset
 
       bodyNode = BulletSoftBodyNode.makeRope(info, p1, p2, n, fixed)
@@ -296,7 +296,7 @@ class Game(DirectObject):
     else:
     	np1 = make(Point3(-2, -1, 8), Vec3(12, 0, 0), 1)
     	boxNP.setPos(10, -1, 8)
-    	
+
 
     # Box
     self.world.attachRigidBody(boxNP.node())
