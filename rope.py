@@ -5,6 +5,8 @@ import numpy as np
 import time
 import cv2
 
+from scipy.spatial.transform import Rotation as R
+
 import direct.directbase.DirectStart
 from direct.showbase.DirectObject import DirectObject
 
@@ -110,12 +112,12 @@ class Game(DirectObject):
     self.depthBuffer.addRenderTexture(self.depthTex,
         GraphicsOutput.RTMCopyRam, GraphicsOutput.RTPDepth)
     lens = base.camNode.getLens()
-    self.K = np.zeros((3, 3))
-    self.K[0, 0] = lens.getFocalLength()
-    self.K[1, 1] = lens.getFocalLength()
-    self.K[2, 2] = 1.0
-    self.K[0, 2] = 320.0
-    self.K[1, 2] = 240.0
+    self.intrinsic_matrix = np.zeros((3, 3))
+    self.intrinsic_matrix[0, 0] = lens.getFocalLength()
+    self.intrinsic_matrix[1, 1] = lens.getFocalLength()
+    self.intrinsic_matrix[2, 2] = 1.0
+    self.intrinsic_matrix[0, 2] = 320.0
+    self.intrinsic_matrix[1, 2] = 240.0
     self.depthCam = base.makeCamera(self.depthBuffer,
         lens=lens,
         scene=render)
@@ -206,15 +208,15 @@ class Game(DirectObject):
            base.cam.setPos(40 * sin(angleRadians), -40.0 * cos(angleRadians), 10)
            base.cam.setHpr(angleDegrees, 0, 0)
            base.cam.lookAt(0, 0, 0)
+
         base.graphicsEngine.renderFrame()
-        I, J, K, R = base.cam.getQuat().getI(), \
-        base.cam.getQuat().getJ(), \
-        base.cam.getQuat().getK(), \
-        base.cam.getQuat().getR()
-        # print(base.cam.getQuat())
-        quaternion = {'w': K, 'x': R, 'y': I, 'z': J}
-        # print(quaternion)
-        # print(base.cam.getPos())
+
+        y, z, w, x = base.cam.getQuat().getI(), base.cam.getQuat().getJ(), \
+        base.cam.getQuat().getK(), base.cam.getQuat().getR()
+        quat = np.array([x, y, z, w])
+        rot = R.from_quat(quat).as_dcm()
+        t = np.array(base.cam.getPos()).reshape(3, 1)
+        extrinsic_matrix = np.vstack((np.hstack((rot, t)), np.array([0.0, 0.0, 0.0, 1.0])))
         image = self.get_camera_image()
         depth_image = self.get_camera_depth_image()
         show_rgbd_image(image, depth_image)
