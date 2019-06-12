@@ -1,6 +1,5 @@
 import sys
 from math import pi, sin, cos
-import random
 import numpy as np
 import time
 import cv2
@@ -19,17 +18,22 @@ BulletDebugNode, BulletSoftBodyNode, BulletSoftBodyConfig
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--static', action='store_true')
-parser.add_argument('--random', action='store_true')
 args = parser.parse_args()
 
-def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, depth_offset=None, depth_scale=None):
+'''Script for visualizing a rope (NURBS curve with thickness) with a rotating camera
+Usage: python3 rope.py #simulates swinging rope
+	   python3 rope.py --static #simulates static rope
+'''
+
+def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, depth_offset=None, depth_scale=0.007):
     if depth_image.dtype != np.uint8:
         if depth_scale is None:
             depth_scale = depth_image.max() - depth_image.min()
+            print(depth_scale)
         if depth_offset is None:
             depth_offset = depth_image.min()
         depth_image = np.clip((depth_image - depth_offset) / depth_scale, 0.0, 1.0)
-        depth_image = (65535.0 * depth_image).astype(np.uint8)
+        depth_image = (255.0 * depth_image).astype(np.uint8)
     depth_image = np.tile(depth_image, (1, 1, 3))
     if image.shape[2] == 4:  # add alpha channel
         alpha = np.full(depth_image.shape[:2] + (1,), 255, dtype=np.uint8)
@@ -48,13 +52,7 @@ def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, dep
         exit_request = False
     return exit_request
 
-def randomDegree():
-    return np.random.randint(361)
-
-def degreesToRadians(degree):
-    return degree * (pi / 180)
-
-class Game(DirectObject):
+class Scene(DirectObject):
 
   def __init__(self):
     self.scene_limit = 200
@@ -62,7 +60,7 @@ class Game(DirectObject):
     base.setBackgroundColor(255, 255, 255)
     base.setFrameRateMeter(True)
 
-    base.cam.setPos(0, -40, 10)
+    base.cam.setPos(0, -45, 10)
     base.cam.lookAt(0, 0, 0)
 
     # Light
@@ -197,17 +195,11 @@ class Game(DirectObject):
 
   def operateCamera(self, task):
         # Rotates the camera and takes RGBD images
-        if args.random:
-         #  base.cam.setPos(0.0, -40, 0)
-           base.cam.setPos(40.0 * sin(degreesToRadians(randomDegree())), -40.0 * cos(degreesToRadians(randomDegree())), 10 * cos(degreesToRadians(randomDegree())))
-           base.cam.setHpr(randomDegree(), randomDegree(), randomDegree())
-           base.cam.lookAt(random.uniform(-2.0, 2.0), random.uniform(-2.0, 2.0), random.uniform(-2.0, 2.0))
-        else:
-           angleDegrees = task.time * 20.0
-           angleRadians = angleDegrees * (pi / 180.0)
-           base.cam.setPos(40 * sin(angleRadians), -40.0 * cos(angleRadians), 10)
-           base.cam.setHpr(angleDegrees, 0, 0)
-           base.cam.lookAt(0, 0, 0)
+        angleDegrees = task.time * 20.0
+        angleRadians = angleDegrees * (pi / 180.0)
+        base.cam.setPos(50 * sin(angleRadians), -50.0 * cos(angleRadians), 10)
+        base.cam.setHpr(angleDegrees, 0, 0)
+        base.cam.lookAt(0, 0, 0)
         base.graphicsEngine.renderFrame()
         I, J, K, R = base.cam.getQuat().getI(), \
         base.cam.getQuat().getJ(), \
@@ -216,7 +208,6 @@ class Game(DirectObject):
         # print(base.cam.getQuat())
         quaternion = {'w': K, 'x': R, 'y': I, 'z': J}
         print(quaternion)
-        print(base.cam.getPos())
         image = self.get_camera_image()
         depth_image = self.get_camera_depth_image()
         show_rgbd_image(image, depth_image)
@@ -242,6 +233,9 @@ class Game(DirectObject):
 
     # Softbody
     def make(p1, offset, fixed):
+      # p1: first vertex of the rope
+      # offset: distance between p1 and p2
+      # fixed: 0 = no point fixed, 1 = first point fixed, 2 = second point fixed, 3 = both points fixed
       n = 8 
       p2 = p1 + offset
 
@@ -271,12 +265,14 @@ class Game(DirectObject):
       visNode.setThickness(0.4)
       visNP = self.worldNP.attachNewNode(visNode)
       #visNP = bodyNP.attachNewNode(visNode) # --> renders with offset!!!
-      visNP.setTexture(loader.loadTexture('assets/simple.jpg'))
+      visNP.setTexture(loader.loadTexture('assets/bowl.jpg'))
 
       #bodyNP.showBounds()
       #visNP.showBounds()
 
       return bodyNP
+
+    # Make the rope and add box
 
     shape = BulletBoxShape(Vec3(0.5, 0.5, 0.5))
 
@@ -304,6 +300,6 @@ class Game(DirectObject):
     visNP.reparentTo(boxNP)
     render.ls()
 
-game = Game()
+scene = Scene()
 
 run()
