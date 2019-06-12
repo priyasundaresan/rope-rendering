@@ -5,5 +5,5 @@
 * A handful of Python libraries (OpenCV, Numpy)
 
 ### Usage
-* `$ python3 rope.py` for dynamic rope rendering
-* `$ python3 rope.py --static` for static rope rendering
+* `$ python3 rope.py` by default renders a dynamic rope
+* Add flat `--static` to render a static rope instead, and add flag `--random` to randomly change the camera pose (for synthetically generating data)
