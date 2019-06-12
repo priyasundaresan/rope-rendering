@@ -2,7 +2,7 @@
 
 ### Dependencies
 * Panda3D (pip install panda3d==1.10.3)
-* A handful of Python libraries (OpenCV, Numpy)
+* A handful of Python libraries (OpenCV, Numpy, Scipy (version 1.3.0))
 
 ### Usage
 * `$ python3 rope.py` by default renders a dynamic rope
