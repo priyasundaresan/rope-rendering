@@ -20,11 +20,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--static', action='store_true')
 args = parser.parse_args()
 
-'''Script for visualizing a rope (NURBS curve with thickness) with a rotating camera
-Usage: python3 rope.py #simulates swinging rope
-	   python3 rope.py --static #simulates static rope
-'''
-
 def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, depth_offset=None, depth_scale=0.007):
     if depth_image.dtype != np.uint8:
         if depth_scale is None:
@@ -52,7 +47,7 @@ def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, dep
         exit_request = False
     return exit_request
 
-class Scene(DirectObject):
+class Game(DirectObject):
 
   def __init__(self):
     self.scene_limit = 200
@@ -233,9 +228,6 @@ class Scene(DirectObject):
 
     # Softbody
     def make(p1, offset, fixed):
-      # p1: first vertex of the rope
-      # offset: distance between p1 and p2
-      # fixed: 0 = no point fixed, 1 = first point fixed, 2 = second point fixed, 3 = both points fixed
       n = 8 
       p2 = p1 + offset
 
@@ -272,8 +264,6 @@ class Scene(DirectObject):
 
       return bodyNP
 
-    # Make the rope and add box
-
     shape = BulletBoxShape(Vec3(0.5, 0.5, 0.5))
 
     boxNP = self.worldNP.attachNewNode(BulletRigidBodyNode('Box'))
@@ -300,6 +290,6 @@ class Scene(DirectObject):
     visNP.reparentTo(boxNP)
     render.ls()
 
-scene = Scene()
+game = Game()
 
 run()
