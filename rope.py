@@ -24,23 +24,22 @@ parser.add_argument('--save', action='store_true')
 args = parser.parse_args()
 
 def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, depth_offset=None, depth_scale=None):
-    print(depth_image.dtype, image.dtype)
-    if depth_image.dtype != np.uint8:
-        if depth_scale is None:
-            depth_scale = depth_image.max() - depth_image.min()
-        if depth_offset is None:
-            depth_offset = depth_image.min()
-        depth_image = np.clip((depth_image - depth_offset) / depth_scale, 0.0, 1.0)
-        depth_image = ((2**8 - 1) * depth_image).astype(np.uint8)
-    depth_image = np.tile(depth_image, (1, 1, 3))
-    if image.shape[2] == 4:  # add alpha channel
-        alpha = np.full(depth_image.shape[:2] + (1,), 255, dtype=np.uint8)
-        depth_image = np.concatenate([depth_image, alpha], axis=-1)
-        depth_image = cv2.bitwise_not(depth_image)
-    images = np.concatenate([image, depth_image], axis=1)
-#    images = cv2.bitwise_not(images)
+    # if depth_image.dtype != np.uint8:
+    # if depth_scale is None:
+    #     depth_scale = depth_image.max() - depth_image.min()
+    # if depth_offset is None:
+    #     print(depth_image.min())
+    #     depth_offset = depth_image.min()
+    # depth_image = np.clip((depth_image - depth_offset) / depth_scale, 0.0, 1.0)
+    # depth_image = (65535 * depth_image).astype(np.uint16)
+    # depth_image = np.tile(depth_image, (1, 1, 3))
+    # if image.shape[2] == 4:  # add alpha channel
+    #     alpha = np.full(depth_image.shape[:2] + (1,), 65535, dtype=np.uint16)
+    #     depth_image = np.concatenate([depth_image, alpha], axis=-1)
+    #     depth_image = cv2.bitwise_not(depth_image)
+    # images = np.concatenate([image, depth_image], axis=1)
     # images = cv2.cvtColor(images, cv2.COLOR_RGB2BGR)  # not needed since image is already in BGR format
-    cv2.imshow(window_name, images)
+    cv2.imshow(window_name, depth_image)
     key = cv2.waitKey(delay)
     key &= 255
     if key == 27 or key == ord('q'):
@@ -114,6 +113,7 @@ class Game(DirectObject):
     self.depthBuffer.addRenderTexture(self.depthTex,
         GraphicsOutput.RTMCopyRam, GraphicsOutput.RTPDepth)
     lens = base.camNode.getLens()
+    print(lens.getProjectionMat())
     # the near and far clipping distances can be changed if desired
     # lens.setNear(5.0)
     # lens.setFar(500.0)
@@ -150,6 +150,9 @@ class Game(DirectObject):
       depth_image = np.frombuffer(data, np.float32)
       depth_image.shape = (self.depthTex.getYSize(), self.depthTex.getXSize(), self.depthTex.getNumComponents())
       depth_image = np.flipud(depth_image)
+      depth_image = (65535 * depth_image).astype(np.uint16)
+      depth_image = np.tile(depth_image, (1, 1, 3))
+      depth_image = cv2.bitwise_not(depth_image)
       return depth_image
 
 
@@ -210,8 +213,8 @@ class Game(DirectObject):
         base.cam.getQuat().getR()
         # print(base.cam.getQuat())
         quaternion = {'w': K, 'x': R, 'y': I, 'z': J}
-        print(quaternion)
-        print(base.cam.getPos())
+        # print(quaternion)
+        # print(base.cam.getPos())
         image = self.get_camera_image()
         depth_image = self.get_camera_depth_image()
         show_rgbd_image(image, depth_image)
