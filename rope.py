@@ -20,16 +20,18 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--static', action='store_true')
 parser.add_argument('--random', action='store_true')
+parser.add_argument('--save', action='store_true')
 args = parser.parse_args()
 
 def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, depth_offset=None, depth_scale=None):
+    print(depth_image.dtype, image.dtype)
     if depth_image.dtype != np.uint8:
         if depth_scale is None:
             depth_scale = depth_image.max() - depth_image.min()
         if depth_offset is None:
             depth_offset = depth_image.min()
         depth_image = np.clip((depth_image - depth_offset) / depth_scale, 0.0, 1.0)
-        depth_image = (65535.0 * depth_image).astype(np.uint8)
+        depth_image = ((2**8 - 1) * depth_image).astype(np.uint8)
     depth_image = np.tile(depth_image, (1, 1, 3))
     if image.shape[2] == 4:  # add alpha channel
         alpha = np.full(depth_image.shape[:2] + (1,), 255, dtype=np.uint8)
@@ -57,7 +59,7 @@ def degreesToRadians(degree):
 class Game(DirectObject):
 
   def __init__(self):
-    self.scene_limit = 200
+    self.scene_limit = 1000
     self.scene_curr = 0
     base.setBackgroundColor(255, 255, 255)
     base.setFrameRateMeter(True)
@@ -182,13 +184,6 @@ class Game(DirectObject):
     dt = globalClock.getDt()
    # print(base.cam.getHpr())
     self.world.doPhysics(dt, 10, 0.004)
-    # if self.scene_curr < self.scene_limit:
-    #     if self.scene_curr % 10 == 0:
-    #         # base.win.saveScreenshot(Filename("{0:06d}_rgb.png".format(self.scene_curr//10)))
-    #     self.scene_curr += 1
-    # else:
-    #     self.doExit()
-
     return task.cont
 
   def cleanup(self):
@@ -220,6 +215,13 @@ class Game(DirectObject):
         image = self.get_camera_image()
         depth_image = self.get_camera_depth_image()
         show_rgbd_image(image, depth_image)
+        if self.scene_curr >= self.scene_limit:
+        	self.doExit()
+        if args.save and self.scene_curr < self.scene_limit:
+        	cv2.imwrite("images/{0:06d}_rgb.jpg".format(self.scene_curr), cv2.resize(image, (640, 480)))
+        	cv2.imwrite("images/{0:06d}_depth.png".format(self.scene_curr), cv2.resize(depth_image, (640, 480)))
+        	self.scene_curr += 1
+        
         return task.cont
 
   def setup(self):
