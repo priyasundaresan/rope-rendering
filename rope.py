@@ -1,5 +1,6 @@
 import sys
 from math import pi, sin, cos
+import random
 import numpy as np
 import time
 import cv2
@@ -18,9 +19,10 @@ BulletDebugNode, BulletSoftBodyNode, BulletSoftBodyConfig
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--static', action='store_true')
+parser.add_argument('--random', action='store_true')
 args = parser.parse_args()
 
-def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, depth_offset=None, depth_scale=0.007):
+def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, depth_offset=None, depth_scale=0.009):
     if depth_image.dtype != np.uint8:
         if depth_scale is None:
             depth_scale = depth_image.max() - depth_image.min()
@@ -47,6 +49,12 @@ def show_rgbd_image(image, depth_image, window_name='Image window', delay=1, dep
         exit_request = False
     return exit_request
 
+def randomDegree():
+    return np.random.randint(361)
+
+def degreesToRadians(degree):
+    return degree * (pi / 180)
+
 class Game(DirectObject):
 
   def __init__(self):
@@ -55,7 +63,7 @@ class Game(DirectObject):
     base.setBackgroundColor(255, 255, 255)
     base.setFrameRateMeter(True)
 
-    base.cam.setPos(0, -45, 10)
+    base.cam.setPos(0, -40, 10)
     base.cam.lookAt(0, 0, 0)
 
     # Light
@@ -190,11 +198,17 @@ class Game(DirectObject):
 
   def operateCamera(self, task):
         # Rotates the camera and takes RGBD images
-        angleDegrees = task.time * 20.0
-        angleRadians = angleDegrees * (pi / 180.0)
-        base.cam.setPos(50 * sin(angleRadians), -50.0 * cos(angleRadians), 10)
-        base.cam.setHpr(angleDegrees, 0, 0)
-        base.cam.lookAt(0, 0, 0)
+        if args.random:
+         #  base.cam.setPos(0.0, -40, 0)
+           base.cam.setPos(40.0 * sin(degreesToRadians(randomDegree())), -40.0 * cos(degreesToRadians(randomDegree())), 10 * cos(degreesToRadians(randomDegree())))
+           base.cam.setHpr(randomDegree(), randomDegree(), randomDegree())
+           base.cam.lookAt(random.uniform(-2.0, 2.0), random.uniform(-2.0, 2.0), random.uniform(-2.0, 2.0))
+        else:
+           angleDegrees = task.time * 20.0
+           angleRadians = angleDegrees * (pi / 180.0)
+           base.cam.setPos(40 * sin(angleRadians), -40.0 * cos(angleRadians), 10)
+           base.cam.setHpr(angleDegrees, 0, 0)
+           base.cam.lookAt(0, 0, 0)
         base.graphicsEngine.renderFrame()
         I, J, K, R = base.cam.getQuat().getI(), \
         base.cam.getQuat().getJ(), \
@@ -203,6 +217,7 @@ class Game(DirectObject):
         # print(base.cam.getQuat())
         quaternion = {'w': K, 'x': R, 'y': I, 'z': J}
         print(quaternion)
+        print(base.cam.getPos())
         image = self.get_camera_image()
         depth_image = self.get_camera_depth_image()
         show_rgbd_image(image, depth_image)
@@ -257,7 +272,7 @@ class Game(DirectObject):
       visNode.setThickness(0.4)
       visNP = self.worldNP.attachNewNode(visNode)
       #visNP = bodyNP.attachNewNode(visNode) # --> renders with offset!!!
-      visNP.setTexture(loader.loadTexture('assets/bowl.jpg'))
+      visNP.setTexture(loader.loadTexture('assets/simple.jpg'))
 
       #bodyNP.showBounds()
       #visNP.showBounds()
