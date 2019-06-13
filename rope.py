@@ -54,10 +54,10 @@ def randomDegree():
 def degreesToRadians(degree):
     return degree * (pi / 180)
 
-class Game(DirectObject):
+class Scene(DirectObject):
 
   def __init__(self):
-    self.scene_limit = 1000
+    self.scene_limit = 10
     self.scene_curr = 0
     base.setBackgroundColor(255, 255, 255)
     base.setFrameRateMeter(True)
@@ -98,6 +98,7 @@ class Game(DirectObject):
     # Needed for camera image
     self.dr = base.camNode.getDisplayRegion(0)
     # Needed for camera depth image
+    width, height = 640, 480
     winprops = WindowProperties.size(base.win.getXSize(), base.win.getYSize())
 #    winprops = WindowProperties.size(640, 480)
     fbprops = FrameBufferProperties()
@@ -111,13 +112,16 @@ class Game(DirectObject):
     self.depthTex.setFormat(Texture.FDepthComponent)
     self.depthBuffer.addRenderTexture(self.depthTex,
         GraphicsOutput.RTMCopyRam, GraphicsOutput.RTPDepth)
+
     lens = base.camNode.getLens()
     self.intrinsic_matrix = np.zeros((3, 3))
     self.intrinsic_matrix[0, 0] = lens.getFocalLength()
     self.intrinsic_matrix[1, 1] = lens.getFocalLength()
     self.intrinsic_matrix[2, 2] = 1.0
-    self.intrinsic_matrix[0, 2] = 320.0
-    self.intrinsic_matrix[1, 2] = 240.0
+    self.intrinsic_matrix[0, 2] = width / 2.0
+    self.intrinsic_matrix[1, 2] = height / 2.0
+    np.savetxt('data/camera-intrinsics.txt', self.intrinsic_matrix)
+
     self.depthCam = base.makeCamera(self.depthBuffer,
         lens=lens,
         scene=render)
@@ -217,15 +221,18 @@ class Game(DirectObject):
         rot = R.from_quat(quat).as_dcm()
         t = np.array(base.cam.getPos()).reshape(3, 1)
         extrinsic_matrix = np.vstack((np.hstack((rot, t)), np.array([0.0, 0.0, 0.0, 1.0])))
+        print(self.intrinsic_matrix)
+        print(extrinsic_matrix)
         image = self.get_camera_image()
         depth_image = self.get_camera_depth_image()
         show_rgbd_image(image, depth_image)
         if self.scene_curr >= self.scene_limit:
         	self.doExit()
         if args.save and self.scene_curr < self.scene_limit:
-        	cv2.imwrite("images/{0:06d}_rgb.jpg".format(self.scene_curr), cv2.resize(image, (640, 480)))
-        	cv2.imwrite("images/{0:06d}_depth.png".format(self.scene_curr), cv2.resize(depth_image, (640, 480)))
-        	self.scene_curr += 1
+            cv2.imwrite("data/frame-{0:06d}.color.jpg".format(self.scene_curr), cv2.resize(image, (640, 480)))
+            cv2.imwrite("data/frame-{0:06d}.depth.png".format(self.scene_curr), cv2.resize(depth_image, (640, 480)))
+            np.savetxt("data/frame-{0:06d}.pose.txt".format(self.scene_curr), extrinsic_matrix)
+            self.scene_curr += 1
 
         return task.cont
 
@@ -311,6 +318,6 @@ class Game(DirectObject):
     visNP.reparentTo(boxNP)
     render.ls()
 
-game = Game()
+scene = Scene()
 
 run()
