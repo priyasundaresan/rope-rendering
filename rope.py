@@ -244,7 +244,8 @@ class Scene(DirectObject):
     self.debugNP.show()
 
     self.world = BulletWorld()
-    self.world.setGravity(Vec3(0, 0, -9.81))
+    # self.world.setGravity(Vec3(0, 0, -9.81))
+    self.world.setGravity(Vec3(0, 0, -400))
     self.world.setDebugNode(self.debugNP.node())
 
     # Soft body world information
@@ -300,11 +301,11 @@ class Scene(DirectObject):
     boxNP.setCollideMask(BitMask32.allOn())
 
     if args.static:
-    	np1 = make(Point3(-2, -1, 8), Vec3(0, 0, -12), 3)
-    	boxNP.setPos(-2, -1, -4)
+    	np1 = make(Point3(-2, -1, 8), Vec3(0, 0, -15), 3)
+    	boxNP.setPos(-2, -1, -7)
     else:
-    	np1 = make(Point3(-2, -1, 8), Vec3(12, 0, 0), 1)
-    	boxNP.setPos(10, -1, 8)
+    	np1 = make(Point3(-2, -1, 8), Vec3(15, 0, 0), 1)
+    	boxNP.setPos(13, -1, 8)
 
 
     # Box
