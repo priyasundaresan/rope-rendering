@@ -57,7 +57,7 @@ def degreesToRadians(degree):
 class Scene(DirectObject):
 
   def __init__(self):
-    self.scene_limit = 10
+    self.scene_limit = 100
     self.scene_curr = 0
     base.setBackgroundColor(255, 255, 255)
     base.setFrameRateMeter(True)
@@ -99,8 +99,8 @@ class Scene(DirectObject):
     self.dr = base.camNode.getDisplayRegion(0)
     # Needed for camera depth image
     width, height = 640, 480
-    winprops = WindowProperties.size(base.win.getXSize(), base.win.getYSize())
-#    winprops = WindowProperties.size(640, 480)
+    #winprops = WindowProperties.size(base.win.getXSize(), base.win.getYSize())
+    winprops = WindowProperties.size(width, height)
     fbprops = FrameBufferProperties()
     fbprops.setDepthBits(1)
     self.depthBuffer = base.graphicsEngine.makeOutput(
@@ -296,17 +296,16 @@ class Scene(DirectObject):
     shape = BulletBoxShape(Vec3(0.5, 0.5, 0.5))
 
     boxNP = self.worldNP.attachNewNode(BulletRigidBodyNode('Box'))
-    boxNP.node().setMass(50.0)
+    boxNP.node().setMass(100.0)
     boxNP.node().addShape(shape)
     boxNP.setCollideMask(BitMask32.allOn())
 
     if args.static:
-    	np1 = make(Point3(-2, -1, 8), Vec3(0, 0, -15), 3)
-    	boxNP.setPos(-2, -1, -7)
+    	np1 = make(Point3(-2, -1, 8), Vec3(0, 0, -13), 3)
+    	boxNP.setPos(-2, -1, -5)
     else:
-    	np1 = make(Point3(-2, -1, 8), Vec3(15, 0, 0), 1)
-    	boxNP.setPos(13, -1, 8)
-
+    	np1 = make(Point3(-2, -1, 8), Vec3(13, 0, 0), 1)
+    	boxNP.setPos(11, -1, 8)
 
     # Box
     self.world.attachRigidBody(boxNP.node())
