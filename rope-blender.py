@@ -2,7 +2,6 @@ import bpy
 from math import *
 from mathutils import *
 
-
 # Delete any objects already in the scene
 bpy.ops.object.mode_set(mode='OBJECT')
 bpy.ops.object.select_all(action='SELECT')
@@ -56,3 +55,8 @@ context.view_layer.objects.active = rope_asymm
 bpy.ops.object.modifier_add(type='CURVE')
 rope_asymm.modifiers["Curve"].deform_axis = 'POS_Z'
 rope_asymm.modifiers["Curve"].object = bpy.data.objects["Bezier"]
+
+# Experiment with creating knots
+# bpy.data.objects['Bezier'].select_set(True)
+# bpy.data.objects['Rope-Asymmetric'].select_set(False)
+# bpy.ops.transform.translate(value=(0.398516, 1.60635, 1.08822))
