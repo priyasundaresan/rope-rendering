@@ -11,7 +11,7 @@
 
 ## rope-blender.py
 ### Dependencies
-* Blender
+* Blender (version 2.8)
 
 ### Usage
 * Open a scripting window in Blender, load rope-blender.py, and run
