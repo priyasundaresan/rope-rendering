@@ -8,6 +8,7 @@ bpy.ops.object.mode_set(mode='OBJECT')
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete()
 
+# Make the rope (based off this tutorial: https://youtu.be/xYhIoiOnPj4)
 context = bpy.context
 bpy.ops.mesh.primitive_circle_add(location=(0, 0, 0))
 bpy.ops.transform.resize(value=(0.1, 0.1, 0.1))
@@ -30,6 +31,8 @@ bpy.ops.object.modifier_add(type='SCREW')
 rope.modifiers["Screw"].screw_offset = 10
 rope.modifiers["Screw"].iterations = 10
 bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Screw")
+
+# Add a cone and a sphere at either end of the rope for asymmetry
 bpy.ops.mesh.primitive_cone_add(location=(0, 0.32, 0))
 bpy.ops.transform.resize(value=(0.5, 0.5, 0.5))
 bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
@@ -38,7 +41,8 @@ bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.join()
 rope_asymm = context.active_object
 rope_asymm.name="Rope-Asymmetric"
-#
+
+# Create bezier curve and attach rope to it
 bpy.ops.curve.primitive_bezier_curve_add(location=(0, 0, 0))
 bpy.ops.transform.resize(value=(7, 7, 7))
 bpy.ops.object.mode_set(mode='EDIT')
