@@ -30,24 +30,25 @@ bpy.ops.object.modifier_add(type='SCREW')
 rope.modifiers["Screw"].screw_offset = 10
 rope.modifiers["Screw"].iterations = 10
 bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Screw")
-bpy.ops.mesh.primitive_cone_add(location=(0, 0, 0))
+bpy.ops.mesh.primitive_cone_add(location=(0, 0.32, 0))
 bpy.ops.transform.resize(value=(0.5, 0.5, 0.5))
 bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
+bpy.ops.mesh.primitive_ico_sphere_add(radius=0.5, location=(0, 0, 10))
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.join()
 rope_asymm = context.active_object
 rope_asymm.name="Rope-Asymmetric"
-# 
-# bpy.ops.curve.primitive_bezier_curve_add(location=(0, 0, 0))
-# bpy.ops.transform.resize(value=(7, 7, 7))
-# bpy.ops.object.mode_set(mode='EDIT')
-# bpy.ops.curve.subdivide(number_cuts=7)
-# bpy.ops.object.mode_set(mode='OBJECT')
-# bezier = context.active_object
-# bezier.name = "Bezier"
-# bpy.data.objects['Bezier'].select_set(False)
-# bpy.data.objects['Rope-Asymmetric'].select_set(True)
-# context.view_layer.objects.active = rope_asymm
-# bpy.ops.object.modifier_add(type='CURVE')
-# rope_asymm.modifiers["Curve"].deform_axis = 'POS_Z'
-# rope_asymm.modifiers["Curve"].object = bpy.data.objects["Bezier"]
+#
+bpy.ops.curve.primitive_bezier_curve_add(location=(0, 0, 0))
+bpy.ops.transform.resize(value=(7, 7, 7))
+bpy.ops.object.mode_set(mode='EDIT')
+bpy.ops.curve.subdivide(number_cuts=7)
+bpy.ops.object.mode_set(mode='OBJECT')
+bezier = context.active_object
+bezier.name = "Bezier"
+bpy.data.objects['Bezier'].select_set(False)
+bpy.data.objects['Rope-Asymmetric'].select_set(True)
+context.view_layer.objects.active = rope_asymm
+bpy.ops.object.modifier_add(type='CURVE')
+rope_asymm.modifiers["Curve"].deform_axis = 'POS_Z'
+rope_asymm.modifiers["Curve"].object = bpy.data.objects["Bezier"]
