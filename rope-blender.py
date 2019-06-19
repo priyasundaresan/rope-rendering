@@ -2,11 +2,12 @@ import bpy
 from math import *
 from mathutils import *
 import pprint
+import numpy as np
 import random
 
 
 class RopeRenderer:
-    def __init__(self, rope_radius=0.1, rope_screw_offset=2, rope_iterations=10, bezier_scale=7, bezier_subdivisions=10):
+    def __init__(self, rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=7, bezier_subdivisions=10):
         self.rope_radius = rope_radius # thickness of rope
         self.rope_iterations = rope_iterations # how many "screws" are stacked lengthwise to create the rope
         self.rope_screw_offset = rope_screw_offset # how tightly wound the "screw" is
@@ -64,6 +65,7 @@ class RopeRenderer:
         bpy.ops.transform.resize(value=(self.bezier_scale, self.bezier_scale, self.bezier_scale))
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.curve.subdivide(number_cuts=self.bezier_subdivisions)
+        bpy.ops.transform.resize(value=(1, 0, 1))
         bpy.ops.object.mode_set(mode='OBJECT')
         self.bezier = bpy.context.active_object
         self.bezier.name = self.bezier_name
@@ -77,8 +79,13 @@ class RopeRenderer:
         bpy.ops.mesh.normals_make_consistent(inside=False)
         bpy.ops.object.mode_set(mode='OBJECT')
 
-    def randomize_one_node(self):
-        pass
+    def randomize_nodes(self, num):
+    	bez_points = self.bezier.data.splines[0].bezier_points
+    	nodes = np.random.choice(bez_points, min(num, len(bez_points)), replace=False)
+    	for node in nodes:
+	    	node.co.x += random.uniform(-0.2, 0.2)
+	    	node.co.y += random.uniform(-0.2, 0.2)
+	    	node.co.z += random.uniform(-0.2, 0.2)
         # bez_points = self.bezier.data.splines[0].bezier_points
         # sz = len(bez_points)
         # for i in range(0, sz):
@@ -86,8 +93,9 @@ class RopeRenderer:
         #     bez_points[i].co.z += random.uniform(0, 0.2)
 
 if __name__ == '__main__':
-    renderer = RopeRenderer()
+    renderer = RopeRenderer(rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=6, bezier_subdivisions=7)
     renderer.clear()
     renderer.make_rigid_rope()
     renderer.add_rope_asymmetry()
     renderer.make_bezier()
+    renderer.randomize_nodes(3)
