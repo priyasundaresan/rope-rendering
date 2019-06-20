@@ -28,7 +28,7 @@ class RopeRenderer:
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete()
-        bpy.ops.object.camera_add(location=[7.3589, -6.9258, 4.9583])
+        bpy.ops.object.camera_add(location=[0, 0, 0])
         self.camera = bpy.context.active_object
         self.camera.name = self.camera_name
         self.camera.rotation_euler = (1.1031, 0.2458, 6.9171)
@@ -88,8 +88,6 @@ class RopeRenderer:
 
     def randomize_nodes(self, num, offset_max):
     	bez_points = self.bezier.data.splines[0].bezier_points
-        knots = [(node.co, node.handle_left, node.handle_right) for node in bez_points]
-        pprint.pprint(knots)
     	knots = np.random.choice(bez_points, min(num, len(bez_points)), replace=False)
     	for knot in knots:
             knot.co.y += random.uniform(-offset_max, offset_max)
@@ -102,7 +100,8 @@ class RopeRenderer:
     def bezier_coords_to_pixels(self):
         scene = bpy.context.scene
         bez_points = self.bezier.data.splines[0].bezier_points
-        knots = [knot.co for knot in bez_points]
+        knots = [self.bezier.matrix_world @ knot.co for knot in bez_points]
+        pixels = []
         for knot_coord in knots:
             co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, knot_coord)
             print("2D Coords:", co_2d)
@@ -114,13 +113,15 @@ class RopeRenderer:
                     int(scene.render.resolution_x * render_scale),
                     int(scene.render.resolution_y * render_scale),
                     )
-            print("Pixel Coords:", (
-                  round(co_2d.x * render_size[0]),
-                  round(co_2d.y * render_size[1]),
-                  ))
+            pixels.append((round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])))
+        pprint.pprint(pixels)
+        np.savetxt('pixels.txt', pixels)
 
+        bpy.context.scene.render.display_mode
+        bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
         bpy.context.scene.render.image_settings.file_format='JPEG'
-        bpy.context.scene.render.filepath = "/Users/priyasundaresan/Desktop/test.jpg"
+        # bpy.context.scene.render.filepath = "/Users/priyasundaresan/Desktop/test.jpg"
+        bpy.context.scene.render.filepath = '/home/priya/Desktop/rope-rendering/test.jpg'
         bpy.ops.render.render(use_viewport = True, write_still=True)
 
 
