@@ -1,4 +1,4 @@
-import bpy
+import bpy, bpy_extras
 from math import *
 from mathutils import *
 import pprint
@@ -17,15 +17,22 @@ class RopeRenderer:
         self.rope = None
         self.asymm_rope = None
         self.bezier = None
+        self.camera = None
         self.rope_name = "Rope"
         self.asymm_rope_name = "Rope-Asymmetric"
         self.bezier_name = "Bezier"
+        self.camera_name = "Camera"
 
     def clear(self):
-        # Delete any existing objects in the scene
+        # Delete any existing objects in the scene, place a camera
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete()
+        bpy.ops.object.camera_add(location=[7.3589, -6.9258, 4.9583])
+        self.camera = bpy.context.active_object
+        self.camera.name = self.camera_name
+        self.camera.rotation_euler = (1.1031, 0.2458, 6.9171)
+
 
     def make_rigid_rope(self):
         # Join 4 circles and "twist" them to create realistic rope (based off this tutorial: https://youtu.be/xYhIoiOnPj4)
@@ -79,23 +86,51 @@ class RopeRenderer:
         bpy.ops.mesh.normals_make_consistent(inside=False)
         bpy.ops.object.mode_set(mode='OBJECT')
 
-    def randomize_nodes(self, num):
+    def randomize_nodes(self, num, offset_max):
     	bez_points = self.bezier.data.splines[0].bezier_points
-    	nodes = np.random.choice(bez_points, min(num, len(bez_points)), replace=False)
-    	for node in nodes:
-	    	node.co.x += random.uniform(-0.2, 0.2)
-	    	node.co.y += random.uniform(-0.2, 0.2)
-	    	node.co.z += random.uniform(-0.2, 0.2)
-        # bez_points = self.bezier.data.splines[0].bezier_points
-        # sz = len(bez_points)
-        # for i in range(0, sz):
-        #     # Set every sixth coordinate's z to 0.5.
-        #     bez_points[i].co.z += random.uniform(0, 0.2)
+        knots = [(node.co, node.handle_left, node.handle_right) for node in bez_points]
+        pprint.pprint(knots)
+    	knots = np.random.choice(bez_points, min(num, len(bez_points)), replace=False)
+    	for knot in knots:
+            knot.co.y += random.uniform(-offset_max, offset_max)
+            knot.co.x += random.uniform(-offset_max, offset_max)
+
+    def reposition_camera(self):
+        bpy.context.scene.camera = self.camera
+        bpy.ops.view3d.camera_to_view_selected()
+
+    def bezier_coords_to_pixels(self):
+        scene = bpy.context.scene
+        bez_points = self.bezier.data.splines[0].bezier_points
+        knots = [knot.co for knot in bez_points]
+        for knot_coord in knots:
+            co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, knot_coord)
+            print("2D Coords:", co_2d)
+            # If you want pixel coords
+            render_scale = scene.render.resolution_percentage / 100
+            scene.render.resolution_x = 640
+            scene.render.resolution_y = 480
+            render_size = (
+                    int(scene.render.resolution_x * render_scale),
+                    int(scene.render.resolution_y * render_scale),
+                    )
+            print("Pixel Coords:", (
+                  round(co_2d.x * render_size[0]),
+                  round(co_2d.y * render_size[1]),
+                  ))
+
+        bpy.context.scene.render.image_settings.file_format='JPEG'
+        bpy.context.scene.render.filepath = "/Users/priyasundaresan/Desktop/test.jpg"
+        bpy.ops.render.render(use_viewport = True, write_still=True)
+
+
 
 if __name__ == '__main__':
-    renderer = RopeRenderer(rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=6, bezier_subdivisions=7)
+    renderer = RopeRenderer(rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=5.5, bezier_subdivisions=8)
     renderer.clear()
     renderer.make_rigid_rope()
     renderer.add_rope_asymmetry()
     renderer.make_bezier()
-    renderer.randomize_nodes(3)
+    renderer.randomize_nodes(1, 0.2)
+    renderer.reposition_camera()
+    renderer.bezier_coords_to_pixels()
