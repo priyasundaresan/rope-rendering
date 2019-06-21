@@ -130,13 +130,13 @@ class RopeRenderer:
                     int(scene.render.resolution_x * render_scale),
                     int(scene.render.resolution_y * render_scale),
                     )
-            pixels.append({j:[round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])]})
+            pixels.append([round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])])
 
         color_filename = "{0:06d}_rgb.png".format(self.i)
         self.knots_info[color_filename] = pixels
         bpy.context.scene.render.display_mode
         bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
-        bpy.context.scene.render.image_settings.file_format='JPEG'
+        bpy.context.scene.render.image_settings.file_format='PNG'
         bpy.context.scene.render.filepath = "/Users/priyasundaresan/Desktop/rope-rendering/images/{}".format(color_filename)
         bpy.ops.render.render(use_viewport = True, write_still=True)
         self.i += 1
@@ -156,4 +156,4 @@ class RopeRenderer:
 
 if __name__ == '__main__':
     renderer = RopeRenderer(rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=3.5, bezier_subdivisions=8)
-    renderer.run(20)
+    renderer.run(10)
