@@ -2,9 +2,10 @@ import bpy, bpy_extras
 from math import *
 from mathutils import *
 import pprint
-import numpy as np
 import random
 import yaml
+import numpy as np
+# import cv2
 
 class RopeRenderer:
     def __init__(self, rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=7, bezier_subdivisions=10):
@@ -29,6 +30,9 @@ class RopeRenderer:
         # Render stuff
         self.knots_info = {}
         self.i = 0
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        prefs.compute_device_type = 'CUDA'
+        prefs.compute_device = 'CUDA_0'
 
     def clear(self):
         # Delete any existing objects in the scene, place a camera randomly
@@ -114,31 +118,43 @@ class RopeRenderer:
         bpy.ops.view3d.camera_to_view_selected()
 
     def render_single_scene(self):
-        # Produce a single image of the current scene, save the bezier knot pixel coordinates
+		# Produce a single image of the current scene, save the bezier knot pixel coordinates
         scene = bpy.context.scene
         knots = [self.bezier.matrix_world @ knot.co for knot in self.bezier_points]
         pixels = []
         for j in range(len(knots)):
-            knot_coord = knots[j]
-            co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, knot_coord)
-            print("2D Coords:", co_2d)
-            # If you want pixel coords
-            render_scale = scene.render.resolution_percentage / 100
-            scene.render.resolution_x = 640
-            scene.render.resolution_y = 480
-            render_size = (
-                    int(scene.render.resolution_x * render_scale),
-                    int(scene.render.resolution_y * render_scale),
-                    )
-            pixels.append([round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])])
-
+        	knot_coord = knots[j]
+        	co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, knot_coord)
+        	print("2D Coords:", co_2d)
+        	# If you want pixel coords
+        	scene.render.resolution_percentage = 100
+        	render_scale = scene.render.resolution_percentage / 100
+        	scene.render.resolution_x = 640
+        	scene.render.resolution_y = 480
+        	render_size = (
+        	        int(scene.render.resolution_x * render_scale),
+        	        int(scene.render.resolution_y * render_scale),
+        	        )
+        	pixels.append([round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])])
         color_filename = "{0:06d}_rgb.png".format(self.i)
-        self.knots_info[color_filename] = pixels
+        mask_filename = "{0:06d}_mask.png".format(self.i)
+        visible_mask_filename = "{0:06d}_visible_mask.png".format(self.i)
+        self.knots_info[self.i] = pixels
+        bpy.context.scene.world.color = (1, 1, 1)
         bpy.context.scene.render.display_mode
         bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
+        bpy.context.scene.display_settings.display_device = 'None'
+        bpy.context.scene.sequencer_colorspace_settings.name = 'XYZ'
         bpy.context.scene.render.image_settings.file_format='PNG'
-        bpy.context.scene.render.filepath = "/Users/priyasundaresan/Desktop/rope-rendering/images/{}".format(color_filename)
+        bpy.context.scene.render.filepath = "/home/priya/Desktop/rope-rendering/images/{}".format(color_filename)
         bpy.ops.render.render(use_viewport = True, write_still=True)
+        # img = cv2.imread('/home/priya/Desktop/rope-rendering/images/{}'.format(color_filename))
+        # img[np.where((img == [255, 255, 255]).all(axis = 2))] = [0, 0, 0]
+        # img[np.where((img != [0, 0, 0]).all(axis = 2))] = [1, 1, 1]
+        # mask = img
+        # visible_mask = img * 255
+        # cv2.imwrite('/home/priya/Desktop/image_masks/{}'.format(mask_filename), mask)
+        # cv2.imwrite('/home/priya/Desktop/image_masks/{}'.format(visible_mask_filename), visible_mask)
         self.i += 1
 
     def run(self, num_images):
@@ -151,9 +167,9 @@ class RopeRenderer:
             self.reposition_camera()
             self.render_single_scene()
         pprint.pprint(self.knots_info)
-        with open("/Users/priyasundaresan/Desktop/rope-rendering/images/knots_info.yaml", 'w') as outfile:
+        with open("/home/priya/Desktop/rope-rendering/images/knots_info.yaml", 'w') as outfile:
             yaml.dump(self.knots_info, outfile, default_flow_style=False)
 
 if __name__ == '__main__':
     renderer = RopeRenderer(rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=3.5, bezier_subdivisions=8)
-    renderer.run(10)
+    renderer.run(400)
