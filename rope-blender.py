@@ -8,7 +8,9 @@ import numpy as np
 # import cv2
 
 class RopeRenderer:
-    def __init__(self, rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=7, bezier_subdivisions=10):
+    def __init__(self, rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=7, bezier_subdivisions=10, save=False):
+        # To save images
+        self.save=save
         # Hyperparams for the rope
         self.rope_radius = rope_radius # thickness of rope
         self.rope_iterations = rope_iterations # how many "screws" are stacked lengthwise to create the rope
@@ -122,32 +124,31 @@ class RopeRenderer:
         scene = bpy.context.scene
         knots = [self.bezier.matrix_world @ knot.co for knot in self.bezier_points]
         pixels = []
+        scene.render.resolution_percentage = 100
+        render_scale = scene.render.resolution_percentage / 100
+        scene.render.resolution_x = 640
+        scene.render.resolution_y = 480
+        render_size = (
+                int(scene.render.resolution_x * render_scale),
+                int(scene.render.resolution_y * render_scale),
+                )
         for j in range(len(knots)):
         	knot_coord = knots[j]
         	co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, knot_coord)
         	print("2D Coords:", co_2d)
         	# If you want pixel coords
-        	scene.render.resolution_percentage = 100
-        	render_scale = scene.render.resolution_percentage / 100
-        	scene.render.resolution_x = 640
-        	scene.render.resolution_y = 480
-        	render_size = (
-        	        int(scene.render.resolution_x * render_scale),
-        	        int(scene.render.resolution_y * render_scale),
-        	        )
         	pixels.append([round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])])
-        color_filename = "{0:06d}_rgb.png".format(self.i)
-        mask_filename = "{0:06d}_mask.png".format(self.i)
-        visible_mask_filename = "{0:06d}_visible_mask.png".format(self.i)
         self.knots_info[self.i] = pixels
         bpy.context.scene.world.color = (1, 1, 1)
         bpy.context.scene.render.display_mode
         bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
         bpy.context.scene.display_settings.display_device = 'None'
         bpy.context.scene.sequencer_colorspace_settings.name = 'XYZ'
-        bpy.context.scene.render.image_settings.file_format='PNG'
-        bpy.context.scene.render.filepath = "/home/priya/Desktop/rope-rendering/images/{}".format(color_filename)
-        bpy.ops.render.render(use_viewport = True, write_still=True)
+        if self.save:
+            color_filename = "{0:06d}_rgb.png".format(self.i)
+            bpy.context.scene.render.image_settings.file_format='PNG'
+            bpy.context.scene.render.filepath = "/home/priya/Desktop/rope-rendering/images/{}".format(color_filename)
+            bpy.ops.render.render(use_viewport = True, write_still=True)
         # img = cv2.imread('/home/priya/Desktop/rope-rendering/images/{}'.format(color_filename))
         # img[np.where((img == [255, 255, 255]).all(axis = 2))] = [0, 0, 0]
         # img[np.where((img != [0, 0, 0]).all(axis = 2))] = [1, 1, 1]
@@ -172,4 +173,4 @@ class RopeRenderer:
 
 if __name__ == '__main__':
     renderer = RopeRenderer(rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=3.5, bezier_subdivisions=8)
-    renderer.run(400)
+    renderer.run(1)
