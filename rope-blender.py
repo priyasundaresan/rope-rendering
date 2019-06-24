@@ -7,8 +7,9 @@ import random
 import yaml
 
 class RopeRenderer:
-    def __init__(self, rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=7, bezier_subdivisions=10):
+    def __init__(self, rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=7, bezier_subdivisions=10, save=False):
         # Hyperparams for the rope
+        self.save = save
         self.rope_radius = rope_radius # thickness of rope
         self.rope_iterations = rope_iterations # how many "screws" are stacked lengthwise to create the rope
         self.rope_screw_offset = rope_screw_offset # how tightly wound the "screw" is
@@ -65,9 +66,9 @@ class RopeRenderer:
     def add_rope_asymmetry(self):
         # Add a cone and icosphere at either end, to break symmetry
         bpy.ops.mesh.primitive_cone_add(location=(self.origin[0], self.origin[1] + 0.32, self.origin[2]))
-        bpy.ops.transform.resize(value=(0.5, 0.5, 0.5))
+        bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
         bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
-        bpy.ops.mesh.primitive_ico_sphere_add(radius=0.5, location=(self.origin[0], self.origin[1], self.origin[2] + self.rope_radius*self.rope_screw_offset*self.rope_iterations))
+        # bpy.ops.mesh.primitive_ico_sphere_add(radius=0.25, location=(self.origin[0], self.origin[1], self.origin[2] + self.rope_radius*self.rope_screw_offset*self.rope_iterations))
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.join()
         self.rope_asymm = bpy.context.active_object
@@ -80,6 +81,9 @@ class RopeRenderer:
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.curve.subdivide(number_cuts=self.bezier_subdivisions)
         bpy.ops.transform.resize(value=(1, 0, 1))
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.curve.select_all(action='SELECT')
+        bpy.ops.curve.handle_type_set(type='AUTOMATIC')
         bpy.ops.object.mode_set(mode='OBJECT')
         self.bezier = bpy.context.active_object
         self.bezier_points = self.bezier.data.splines[0].bezier_points
@@ -94,10 +98,11 @@ class RopeRenderer:
         bpy.ops.mesh.normals_make_consistent(inside=False)
         bpy.ops.object.mode_set(mode='OBJECT')
 
-    def randomize_nodes(self, num, offset_min, offset_max):
+    def randomize_nodes(self, num, offset_min, offset_max, buffer, alpha):
         # Random select num knots, pull them in a random direction (constrained by offset_min, offset_max)
-        knots = np.random.choice(self.bezier_points, min(num, len(self.bezier_points)), replace=False)
-        for knot in knots:
+        knots_idxs = np.random.choice(range(buffer - 1, len(self.bezier_points) - buffer), min(num, len(self.bezier_points)), replace=False)
+        for idx in knots_idxs:
+            knot = self.bezier_points[idx]
             offset_y = random.uniform(offset_min, offset_max)
             offset_x = random.uniform(offset_min, offset_max)
             if random.uniform(0, 1) < 0.5:
@@ -106,6 +111,15 @@ class RopeRenderer:
                 offset_x *= -1
             knot.co.y += offset_y
             knot.co.x += offset_x
+            if idx + buffer > len(self.bezier_points):
+                r = range(-1, -buffer - 1, -1)
+            else:
+                r = range(1, buffer + 1, 1)
+            for b in r:
+                idx_a = idx + b
+                knot_a = self.bezier_points[idx_a]
+                knot_a.co.y += alpha*offset_y/b
+                knot_a.co.x += alpha*offset_x/b
 
 
     def reposition_camera(self):
@@ -132,14 +146,15 @@ class RopeRenderer:
                     )
             pixels.append([round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])])
 
-        color_filename = "{0:06d}_rgb.png".format(self.i)
-        self.knots_info[color_filename] = pixels
-        bpy.context.scene.render.display_mode
-        bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
-        bpy.context.scene.render.image_settings.file_format='PNG'
-        bpy.context.scene.render.filepath = "/Users/priyasundaresan/Desktop/rope-rendering/images/{}".format(color_filename)
-        bpy.ops.render.render(use_viewport = True, write_still=True)
-        self.i += 1
+        if self.save:
+            self.knots_info[color_filename] = pixels
+            bpy.context.scene.render.display_mode
+            bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
+            bpy.context.scene.render.image_settings.file_format='PNG'
+            color_filename = "{0:06d}_rgb.png".format(self.i)
+            bpy.context.scene.render.filepath = "/Users/priyasundaresan/Desktop/rope-rendering/images/{}".format(color_filename)
+            bpy.ops.render.render(use_viewport = True, write_still=True)
+            self.i += 1
 
     def run(self, num_images):
         for i in range(num_images):
@@ -147,7 +162,7 @@ class RopeRenderer:
             self.make_rigid_rope()
             self.add_rope_asymmetry()
             self.make_bezier()
-            self.randomize_nodes(1, 0.15, 0.30)
+            self.randomize_nodes(2, 0.2, 0.4, 4, 1)
             self.reposition_camera()
             self.render_single_scene()
         pprint.pprint(self.knots_info)
@@ -155,5 +170,5 @@ class RopeRenderer:
             yaml.dump(self.knots_info, outfile, default_flow_style=False)
 
 if __name__ == '__main__':
-    renderer = RopeRenderer(rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=3.5, bezier_subdivisions=8)
-    renderer.run(10)
+    renderer = RopeRenderer(rope_radius=0.05, rope_screw_offset=10, rope_iterations=20, bezier_scale=3, bezier_subdivisions=38)
+    renderer.run(1)

@@ -9,7 +9,6 @@ if __name__ == '__main__':
     parser.add_argument("index", type=int)
     args = parser.parse_args()
     filename = "{0:06d}_rgb.png".format(args.index)
-
     img = cv2.imread('images/{}'.format(filename))
     with open("images/knots_info.yaml", "r") as stream:
         knots_info = yaml.safe_load(stream)
