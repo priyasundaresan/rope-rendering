@@ -2,9 +2,10 @@ import bpy, bpy_extras
 from math import *
 from mathutils import *
 import pprint
-import numpy as np
 import random
 import yaml
+import numpy as np
+# import cv2
 
 class RopeRenderer:
     def __init__(self, rope_radius=0.1, rope_screw_offset=10, rope_iterations=10, bezier_scale=7, bezier_subdivisions=10, save=False):
@@ -30,6 +31,9 @@ class RopeRenderer:
         # Render stuff
         self.knots_info = {}
         self.i = 0
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        prefs.compute_device_type = 'CUDA'
+        prefs.compute_device = 'CUDA_0'
 
     def clear(self):
         # Delete any existing objects in the scene, place a camera randomly
@@ -128,10 +132,18 @@ class RopeRenderer:
         bpy.ops.view3d.camera_to_view_selected()
 
     def render_single_scene(self):
-        # Produce a single image of the current scene, save the bezier knot pixel coordinates
+		# Produce a single image of the current scene, save the bezier knot pixel coordinates
         scene = bpy.context.scene
         knots = [self.bezier.matrix_world @ knot.co for knot in self.bezier_points]
         pixels = []
+        scene.render.resolution_percentage = 100
+        render_scale = scene.render.resolution_percentage / 100
+        scene.render.resolution_x = 640
+        scene.render.resolution_y = 480
+        render_size = (
+                int(scene.render.resolution_x * render_scale),
+                int(scene.render.resolution_y * render_scale),
+                )
         for j in range(len(knots)):
             knot_coord = knots[j]
             co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, knot_coord)
@@ -166,7 +178,7 @@ class RopeRenderer:
             self.reposition_camera()
             self.render_single_scene()
         pprint.pprint(self.knots_info)
-        with open("/Users/priyasundaresan/Desktop/rope-rendering/images/knots_info.yaml", 'w') as outfile:
+        with open("/home/priya/Desktop/rope-rendering/images/knots_info.yaml", 'w') as outfile:
             yaml.dump(self.knots_info, outfile, default_flow_style=False)
 
 if __name__ == '__main__':
