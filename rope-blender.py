@@ -104,11 +104,12 @@ class RopeRenderer:
 
     def randomize_nodes(self, num, offset_min, offset_max, buffer, alpha):
         # Random select num knots, pull them in a random direction (constrained by offset_min, offset_max)
-        knots_idxs = np.random.choice(range(buffer - 1, len(self.bezier_points) - buffer), min(num, len(self.bezier_points)), replace=False)
+        knots_idxs = np.random.choice(range(buffer - 1, len(self.bezier_points) - buffer, buffer*2), min(num, len(self.bezier_points)), replace=False)
+
         for idx in knots_idxs:
             knot = self.bezier_points[idx]
             offset_y = random.uniform(offset_min, offset_max)
-            offset_x = random.uniform(offset_min, offset_max)
+            offset_x = random.uniform(offset_min/2, offset_max/2)
             if random.uniform(0, 1) < 0.5:
                 offset_y *= -1
             if random.uniform(0, 1) < 0.5:
@@ -130,6 +131,9 @@ class RopeRenderer:
         # Orient camera towards the rope
         bpy.context.scene.camera = self.camera
         bpy.ops.view3d.camera_to_view_selected()
+
+    def in_bounds(self, pixel):
+        return 0 <= pixel[0] <= 640 and 0 <= pixel[1] <= 480
 
     def render_single_scene(self):
 		# Produce a single image of the current scene, save the bezier knot pixel coordinates
@@ -158,12 +162,15 @@ class RopeRenderer:
                     )
             pixels.append([round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])])
 
-        if self.save:
-            self.knots_info[color_filename] = pixels
+        if self.save and all([self.in_bounds(p) for p in pixels]):
+            color_filename = "{0:06d}_rgb.png".format(self.i)
+            self.knots_info[self.i] = pixels
+            bpy.context.scene.world.color = (1, 1, 1)
             bpy.context.scene.render.display_mode
             bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
+            bpy.context.scene.display_settings.display_device = 'None'
+            bpy.context.scene.sequencer_colorspace_settings.name = 'XYZ'
             bpy.context.scene.render.image_settings.file_format='PNG'
-            color_filename = "{0:06d}_rgb.png".format(self.i)
             bpy.context.scene.render.filepath = "/Users/priyasundaresan/Desktop/rope-rendering/images/{}".format(color_filename)
             bpy.ops.render.render(use_viewport = True, write_still=True)
             self.i += 1
@@ -178,9 +185,9 @@ class RopeRenderer:
             self.reposition_camera()
             self.render_single_scene()
         pprint.pprint(self.knots_info)
-        with open("/home/priya/Desktop/rope-rendering/images/knots_info.yaml", 'w') as outfile:
+        with open("/Users/priyasundaresan/Desktop/rope-rendering/images/knots_info.yaml", 'w') as outfile:
             yaml.dump(self.knots_info, outfile, default_flow_style=False)
 
 if __name__ == '__main__':
-    renderer = RopeRenderer(rope_radius=0.05, rope_screw_offset=10, rope_iterations=20, bezier_scale=3, bezier_subdivisions=38)
-    renderer.run(1)
+    renderer = RopeRenderer(rope_radius=0.05, rope_screw_offset=10, rope_iterations=20, bezier_scale=3, bezier_subdivisions=38, save=True)
+    renderer.run(3100)
