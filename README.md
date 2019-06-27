@@ -22,7 +22,9 @@
   * `./python3.7m get-pip.py`
   * `./python3.7m pip3 install PyYAML`
 
-### Usage
-* To visualize rendering in blender, open a scripting window in Blender, load rope-blender.py, and run
-* Select the spline in 'Edit' mode, press 'G,' and mouseover any of the spline nodes to move the rope
-* To generate data in background, run `blender -b -P rope-blender.py`
+### Rendering Usage
+* Off-screen rendering: run `blender -b -P rope-blender.py`
+* On-screen rendering: run `blender -P rope-blender.py`
+* For debugging purposes, you can also open a scripting window in Blender, copy or load `rope-blender.py` and hit `Run Script`
+  * To manually deform the road, select the spline in `'EDIT'` mode, press `'G'`, and grab any of the spline nodes with a mouse to move the rope. You can select groups of nodes at a time by pressing `'Ctrl'` while grabbing nodes.
+
