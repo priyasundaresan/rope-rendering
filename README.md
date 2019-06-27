@@ -6,6 +6,9 @@
 * OpenCV
 * PyYAML
 
+### Description
+* This repo hosts rendering scripts for the dense descriptors for deformable objects project.
+
 ### Setup
 * After downloading Blender version 2.8, do the following steps:
 * Add the following line to your .bashrc: 
