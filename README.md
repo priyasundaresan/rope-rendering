@@ -7,7 +7,10 @@
 * PyYAML
 
 ### Description
-* This repo hosts rendering scripts for the dense descriptors for deformable objects project.
+* This repo hosts rendering scripts for the dense descriptors for deformable objects project. 
+  * `rope-blender.py`: renders images of deformable rope into directory `rope-rendering/images` and dumps a YAML file with vertex pixel info into the same folder
+  * `vis.py`: loads a set of images and a YAML file from `rope-rending/images` and highlights all the pixels in the YAML file on each image. Dumps annotated images into `rope-rendering/annotated`
+  * `mask.py`: renders a visible mask (255's and 0's) and non-visible mask (1's and 0's) of each image and dumps them to `rope-rendering/image_masks.`
 
 ### Setup
 * After downloading Blender version 2.8, do the following steps:
