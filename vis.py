@@ -17,8 +17,12 @@ def show_knots(idx, knots_info, save=True):
 
 
 if __name__ == '__main__':
-
-	with open("images/knots_info.yaml", "r") as stream:
-		knots_info = yaml.safe_load(stream)
-	for i in range(len(os.listdir('/Users/priyasundaresan/Desktop/rope-rendering/images')) - 1):
-		show_knots(i, knots_info)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--num', type=int, default=len(os.listdir('/Users/priyasundaresan/Desktop/rope-rendering/images')) - 1)
+    args = parser.parse_args()
+    print("parsed")
+    with open("images/knots_info.yaml", "r") as stream:
+	    knots_info = yaml.safe_load(stream)
+    print("loaded knots info")
+    for i in range(args.num):
+	    show_knots(i, knots_info)

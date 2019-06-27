@@ -138,7 +138,7 @@ class RopeRenderer:
     def render_single_scene(self):
 		# Produce a single image of the current scene, save the bezier knot pixel coordinates
         scene = bpy.context.scene
-        knots = [self.bezier.matrix_world @ knot.co for knot in self.bezier_points]
+        # knots = [self.bezier.matrix_world @ knot.co for knot in self.bezier_points]
         pixels = []
         scene.render.resolution_percentage = 100
         render_scale = scene.render.resolution_percentage / 100
@@ -161,15 +161,14 @@ class RopeRenderer:
                     int(scene.render.resolution_y * render_scale),
                     )
             pixels.append([round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])])
-
+        bpy.context.scene.world.color = (1, 1, 1)
+        bpy.context.scene.render.display_mode
+        bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
+        bpy.context.scene.display_settings.display_device = 'None'
+        bpy.context.scene.sequencer_colorspace_settings.name = 'XYZ'
         if self.save and all([self.in_bounds(p) for p in pixels]):
             color_filename = "{0:06d}_rgb.png".format(self.i)
             self.knots_info[self.i] = pixels
-            bpy.context.scene.world.color = (1, 1, 1)
-            bpy.context.scene.render.display_mode
-            bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
-            bpy.context.scene.display_settings.display_device = 'None'
-            bpy.context.scene.sequencer_colorspace_settings.name = 'XYZ'
             bpy.context.scene.render.image_settings.file_format='PNG'
             bpy.context.scene.render.filepath = "/Users/priyasundaresan/Desktop/rope-rendering/images/{}".format(color_filename)
             bpy.ops.render.render(use_viewport = True, write_still=True)
@@ -181,7 +180,7 @@ class RopeRenderer:
             self.make_rigid_rope()
             self.add_rope_asymmetry()
             self.make_bezier()
-            self.randomize_nodes(2, 0.2, 0.4, 4, 1)
+            self.randomize_nodes(2, 0.2, 0.3, 4, 1)
             self.reposition_camera()
             self.render_single_scene()
         pprint.pprint(self.knots_info)
@@ -189,5 +188,5 @@ class RopeRenderer:
             yaml.dump(self.knots_info, outfile, default_flow_style=False)
 
 if __name__ == '__main__':
-    renderer = RopeRenderer(rope_radius=0.05, rope_screw_offset=10, rope_iterations=20, bezier_scale=3, bezier_subdivisions=38, save=True)
-    renderer.run(3100)
+    renderer = RopeRenderer(rope_radius=0.05, rope_screw_offset=10, rope_iterations=20, bezier_scale=3.4, bezier_subdivisions=48, save=False)
+    renderer.run(1)
