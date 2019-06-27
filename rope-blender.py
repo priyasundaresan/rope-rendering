@@ -19,13 +19,13 @@ class RopeRenderer:
         self.origin = (0, 0, 0)
         # Make objects
         self.rope = None
-        self.asymm_rope = None
+        self.rope_asymm = None
         self.bezier = None
         self.bezier_points = None
         self.camera = None
         # Name objects
         self.rope_name = "Rope"
-        self.asymm_rope_name = "Rope-Asymmetric"
+        self.rope_asymm_name = "Rope-Asymmetric"
         self.bezier_name = "Bezier"
         self.camera_name = "Camera"
         # Render stuff
@@ -76,7 +76,7 @@ class RopeRenderer:
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.join()
         self.rope_asymm = bpy.context.active_object
-        self.rope_asymm.name= self.asymm_rope_name
+        self.rope_asymm.name= self.rope_asymm_name
 
     def make_bezier(self):
         # Create bezier curve, attach rope to it
@@ -138,7 +138,11 @@ class RopeRenderer:
     def render_single_scene(self):
 		# Produce a single image of the current scene, save the bezier knot pixel coordinates
         scene = bpy.context.scene
+        depsgraph = bpy.context.evaluated_depsgraph_get()
         # knots = [self.bezier.matrix_world @ knot.co for knot in self.bezier_points]
+        rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
+        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::100]]
+        print(len(coords))
         pixels = []
         scene.render.resolution_percentage = 100
         render_scale = scene.render.resolution_percentage / 100
@@ -148,10 +152,9 @@ class RopeRenderer:
                 int(scene.render.resolution_x * render_scale),
                 int(scene.render.resolution_y * render_scale),
                 )
-        for j in range(len(knots)):
-            knot_coord = knots[j]
-            co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, knot_coord)
-            print("2D Coords:", co_2d)
+        for j in range(len(coords)):
+            coord = coords[j]
+            co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, coord)
             # If you want pixel coords
             render_scale = scene.render.resolution_percentage / 100
             scene.render.resolution_x = 640
@@ -166,11 +169,12 @@ class RopeRenderer:
         bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
         bpy.context.scene.display_settings.display_device = 'None'
         bpy.context.scene.sequencer_colorspace_settings.name = 'XYZ'
-        if self.save and all([self.in_bounds(p) for p in pixels]):
+        # if self.save and all([self.in_bounds(p) for p in pixels]):
+        if self.save:
             color_filename = "{0:06d}_rgb.png".format(self.i)
             self.knots_info[self.i] = pixels
             bpy.context.scene.render.image_settings.file_format='PNG'
-            bpy.context.scene.render.filepath = "/Users/priyasundaresan/Desktop/rope-rendering/images/{}".format(color_filename)
+            bpy.context.scene.render.filepath = "/home/priya/Desktop/rope-rendering/images/{}".format(color_filename)
             bpy.ops.render.render(use_viewport = True, write_still=True)
             self.i += 1
 
@@ -183,10 +187,10 @@ class RopeRenderer:
             self.randomize_nodes(2, 0.2, 0.3, 4, 1)
             self.reposition_camera()
             self.render_single_scene()
-        pprint.pprint(self.knots_info)
-        with open("/Users/priyasundaresan/Desktop/rope-rendering/images/knots_info.yaml", 'w') as outfile:
+        # pprint.pprint(self.knots_info)
+        with open("/home/priya/Desktop/rope-rendering/images/knots_info.yaml", 'w') as outfile:
             yaml.dump(self.knots_info, outfile, default_flow_style=False)
 
 if __name__ == '__main__':
-    renderer = RopeRenderer(rope_radius=0.05, rope_screw_offset=10, rope_iterations=20, bezier_scale=3.4, bezier_subdivisions=48, save=False)
-    renderer.run(1)
+    renderer = RopeRenderer(rope_radius=0.05, rope_screw_offset=10, rope_iterations=20, bezier_scale=3.4, bezier_subdivisions=48, save=True)
+    renderer.run(3000)
