@@ -4,6 +4,7 @@ from mathutils import *
 import pprint
 import random
 import yaml
+import json
 import numpy as np
 # import cv2
 
@@ -155,7 +156,7 @@ class RopeRenderer:
         depsgraph = bpy.context.evaluated_depsgraph_get()
         # knots = [self.bezier.matrix_world @ knot.co for knot in self.bezier_points]
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
-        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::100]]
+        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::50]]
         print(len(coords))
         pixels = []
         scene.render.resolution_percentage = 100
@@ -204,9 +205,9 @@ class RopeRenderer:
             self.reposition_camera()
             self.render_single_scene()
         # pprint.pprint(self.knots_info)
-        with open("/home/priya/Desktop/rope-rendering/images/knots_info.yaml", 'w') as outfile:
-            yaml.dump(self.knots_info, outfile, default_flow_style=False)
+        with open("/home/priya/Desktop/rope-rendering/images/knots_info.json", 'w') as outfile:
+            json.dump(self.knots_info, outfile, sort_keys=True, indent=2)
 
 if __name__ == '__main__':
     renderer = RopeRenderer(rope_radius=0.05, rope_screw_offset=10, rope_iterations=20, bezier_scale=3.4, bezier_subdivisions=48, save=True)
-    renderer.run(3730)
+    renderer.run(300)
