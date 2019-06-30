@@ -37,9 +37,23 @@ class RopeRenderer:
 
     def clear(self):
         # Delete any existing objects in the scene, place a camera randomly
+        for block in bpy.data.meshes:
+            if block.users == 0:
+                bpy.data.meshes.remove(block)
+        for block in bpy.data.materials:
+            if block.users == 0:
+                bpy.data.materials.remove(block)
+        for block in bpy.data.textures:
+            if block.users == 0:
+                bpy.data.textures.remove(block)
+        for block in bpy.data.images:
+            if block.users == 0:
+                bpy.data.images.remove(block)
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete()
+    
+    def add_camera(self):
         bpy.ops.object.camera_add(location=[random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)])
         self.camera = bpy.context.active_object
         self.camera.name = self.camera_name
@@ -135,7 +149,7 @@ class RopeRenderer:
     def in_bounds(self, pixel):
         return 0 <= pixel[0] <= 640 and 0 <= pixel[1] <= 480
 
-    def render_single_scene(self):
+    def render_single_scene(self, idx=None):
 		# Produce a single image of the current scene, save the bezier knot pixel coordinates
         scene = bpy.context.scene
         depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -173,14 +187,16 @@ class RopeRenderer:
         if self.save:
             color_filename = "{0:06d}_rgb.png".format(self.i)
             self.knots_info[self.i] = pixels
+            self.i += 1
             bpy.context.scene.render.image_settings.file_format='PNG'
             bpy.context.scene.render.filepath = "/home/priya/Desktop/rope-rendering/images/{}".format(color_filename)
             bpy.ops.render.render(use_viewport = True, write_still=True)
-            self.i += 1
+            
 
     def run(self, num_images):
         for i in range(num_images):
             self.clear()
+            self.add_camera()
             self.make_rigid_rope()
             self.add_rope_asymmetry()
             self.make_bezier()
@@ -193,4 +209,4 @@ class RopeRenderer:
 
 if __name__ == '__main__':
     renderer = RopeRenderer(rope_radius=0.05, rope_screw_offset=10, rope_iterations=20, bezier_scale=3.4, bezier_subdivisions=48, save=True)
-    renderer.run(3000)
+    renderer.run(3730)

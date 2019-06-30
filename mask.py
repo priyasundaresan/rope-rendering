@@ -4,7 +4,7 @@ import os
 import argparse
 
 def mask(image_filename):
-	img = cv2.imread('/Users/priyasundaresan/Desktop/rope-rendering/images/{}'.format(image_filename))
+	img = cv2.imread('/home/priya/Desktop/rope-rendering/images/{}'.format(image_filename))
 	img[np.where((img == [255, 255, 255]).all(axis = 2))] = [0, 0, 0]
 	img[np.where((img != [0, 0, 0]).all(axis = 2))] = [1, 1, 1]
 	mask = img
@@ -16,7 +16,7 @@ def mask(image_filename):
 
 
 if __name__ == '__main__':
-	for filename in os.listdir('/Users/priyasundaresan/Desktop/rope-rendering/images'):
+	for filename in os.listdir('/home/priya/Desktop/rope-rendering/images'):
 		try:
 			print("Masking %s" % filename)
 			mask(filename)
