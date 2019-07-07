@@ -12,9 +12,15 @@ def show_knots(idx, knots_info, save=True):
 	img = cv2.imread('images/{}'.format(image_filename))
 	pixels = knots_info[str(idx)]
 	for i in range(len(pixels)):
-		(u, v) = pixels[i]
+		# if pixels[i][1]:
+		valid = pixels[i][1]
+		(u, v) = pixels[i][0]
 		val = 255 * i/len(pixels)
-		cv2.circle(img,(int(u), int(v)), 1, (val, 255 - val, 255), -1)
+		if valid:
+			color = (val, 255 - val, 255)
+		else:
+			color = (255, 255, 255)
+		cv2.circle(img,(int(u), int(v)), 1, color, -1)
 	if save:
 		annotated_filename = "{0:06d}_annotated.png".format(idx)
 		cv2.imwrite('./annotated/{}'.format(annotated_filename), img)

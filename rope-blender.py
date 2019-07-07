@@ -1,12 +1,11 @@
 import bpy, bpy_extras
 from math import *
-from mathutils import *
 import pprint
+from mathutils import *
 import random
 import yaml
 import json
 import numpy as np
-# import cv2
 import os
 
 class RopeRenderer:
@@ -58,21 +57,20 @@ class RopeRenderer:
         for block in bpy.data.meshes:
             if block.users == 0:
                 bpy.data.meshes.remove(block)
-        for block in bpy.data.materials:
-            if block.users == 0:
-                bpy.data.materials.remove(block)
-        for block in bpy.data.textures:
-            if block.users == 0:
-                bpy.data.textures.remove(block)
-        for block in bpy.data.images:
-            if block.users == 0:
-                bpy.data.images.remove(block)
+        # for block in bpy.data.materials:
+        #     if block.users == 0:
+        #         bpy.data.materials.remove(block)
+        # for block in bpy.data.textures:
+        #     if block.users == 0:
+        #         bpy.data.textures.remove(block)
+        # for block in bpy.data.images:
+        #     if block.users == 0:
+        #         bpy.data.images.remove(block)
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete()
 
     def add_camera(self):
-
         # Place a camera 'randomly' (not totally random, x and y rotation is only -pi/4 to pi/4 to avoid views of the side of the rope)
         bpy.ops.object.camera_add(location=[random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)])
         self.camera = bpy.context.active_object
@@ -106,7 +104,6 @@ class RopeRenderer:
         bpy.ops.mesh.primitive_cone_add(location=(self.origin[0], self.origin[1] + 0.32, self.origin[2]))
         bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
         bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
-        # bpy.ops.mesh.primitive_ico_sphere_add(radius=0.25, location=(self.origin[0], self.origin[1], self.origin[2] + self.rope_radius*self.rope_screw_offset*self.rope_iterations))
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.join()
         self.rope_asymm = bpy.context.active_object
@@ -189,17 +186,18 @@ class RopeRenderer:
         bpy.context.scene.camera = self.camera
         bpy.ops.view3d.camera_to_view_selected()
 
-    def in_bounds(self, pixel):
-        return 0 <= pixel[0] <= 640 and 0 <= pixel[1] <= 480
+    def dist(self, p1, p2):
+        return np.linalg.norm(np.array(p1) - np.array(p2))
 
-    def render_single_scene(self, idx=None):
+    def closest_coord_from_list(self, p, coords):
+        return min(range(len(coords)), key=lambda c: self.dist(c, p))
+
+    def render_single_scene(self, M_pix=3, M_depth=0.2):
 		# Produce a single image of the current scene, save the bezier knot pixel coordinates
         scene = bpy.context.scene
         depsgraph = bpy.context.evaluated_depsgraph_get()
-        # knots = [self.bezier.matrix_world @ knot.co for knot in self.bezier_points]
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
-        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::20]]
-        print(len(coords))
+        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::50]]
         pixels = []
         scene.render.resolution_percentage = 100
         render_scale = scene.render.resolution_percentage / 100
@@ -220,13 +218,25 @@ class RopeRenderer:
                     int(scene.render.resolution_x * render_scale),
                     int(scene.render.resolution_y * render_scale),
                     )
-            pixels.append([round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])])
+            p = [round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])]
+            valid = True
+            for i in range(len(pixels)):
+                px = pixels[i][0]
+                px_valid = pixels[i][1]
+                if px_valid:
+                    if self.dist(p, px) < M_pix:
+                        if abs(coords[j][2] - coords[i][2]) > M_depth:
+                            if coords[j][2] < coords[i][2]:
+                                valid = False
+                                break
+                            else:
+                                pixels[i][1] = False
+            pixels.append([p, valid])
         bpy.context.scene.world.color = (1, 1, 1)
         bpy.context.scene.render.display_mode
         bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
         bpy.context.scene.display_settings.display_device = 'None'
         bpy.context.scene.sequencer_colorspace_settings.name = 'XYZ'
-        # if self.save and all([self.in_bounds(p) for p in pixels]):
         if self.save:
             color_filename = "{0:06d}_rgb.png".format(self.i)
             self.knots_info[self.i] = pixels
@@ -246,16 +256,13 @@ class RopeRenderer:
             self.make_rigid_rope()
             self.add_rope_asymmetry()
             self.make_bezier()
-            if random.uniform(0, 1) <= 1.0:
-                loop_indices = self.make_simple_loop(0.2, 0.3)
-                self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
-            else:
-                self.randomize_nodes(2, 0.15, 0.35)
+            loop_indices = self.make_simple_loop(0.2, 0.3)
+            self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
             self.reposition_camera()
-            self.render_single_scene()
+            self.render_single_scene(M_pix=10)
         with open("./images/knots_info.json", 'w') as outfile:
             json.dump(self.knots_info, outfile, sort_keys=True, indent=2)
 
 if __name__ == '__main__':
     renderer = RopeRenderer(rope_radius=0.04, rope_screw_offset=10, bezier_scale=2.7, bezier_subdivisions=13, save=True)
-    renderer.run(3730)
+    renderer.run(3)
