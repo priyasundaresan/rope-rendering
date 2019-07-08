@@ -7,6 +7,7 @@ import yaml
 import json
 import numpy as np
 import os
+from sklearn.neighbors import NearestNeighbors
 
 class RopeRenderer:
     def __init__(self, rope_radius=0.1, rope_screw_offset=10, bezier_scale=7, bezier_subdivisions=10, save=False):
@@ -192,14 +193,14 @@ class RopeRenderer:
     def closest_coord_from_list(self, p, coords):
         return min(range(len(coords)), key=lambda c: self.dist(c, p))
 
-    def render_single_scene(self, M_pix=3, M_depth=0.2):
+    def render_single_scene(self, M_pix=10, M_depth=0.2):
 		# Produce a single image of the current scene, save the bezier knot pixel coordinates
         scene = bpy.context.scene
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
         coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::50]]
         print("%d Vertices" % len(coords))
-        pixels = []
+        pixels = {}
         scene.render.resolution_percentage = 100
         render_scale = scene.render.resolution_percentage / 100
         scene.render.resolution_x = 640
@@ -209,8 +210,8 @@ class RopeRenderer:
                 int(scene.render.resolution_y * render_scale),
                 )
 
-        for j in range(len(coords)):
-            coord = coords[j]
+        for i in range(len(coords)):
+            coord = coords[i]
             co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, coord)
             # If you want pixel coords
             render_scale = scene.render.resolution_percentage / 100
@@ -220,20 +221,48 @@ class RopeRenderer:
                     int(scene.render.resolution_x * render_scale),
                     int(scene.render.resolution_y * render_scale),
                     )
-            p = [round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1])]
+            p = (round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1]))
             valid = True
-            for i in range(len(pixels)):
-                px = pixels[i][0]
-                px_valid = pixels[i][1]
-                if px_valid:
-                    if self.dist(p, px) < M_pix:
-                        if abs(coords[j].z - coords[i].z) > M_depth:
-                            if coords[j].z < coords[i].z:
-                                valid = False
-                                break
-                            else:
-                                pixels[i][1] = False
-            pixels.append([p, valid])
+            # for i in range(len(pixels)):
+            #     px = pixels[i][0]
+            #     px_valid = pixels[i][1]
+            #     if px_valid:
+            #         if self.dist(p, px) < M_pix:
+            #             if abs(coords[j].z - coords[i].z) > M_depth:
+            #                 if coords[j].z < coords[i].z:
+            #                     valid = False
+            #                     break
+            #                 else:
+            #                     pixels[i][1] = False
+            pixels[p] = [valid, coord]
+        neigh = NearestNeighbors(2, M_pix)
+        pixels_list = list(pixels.keys())
+        neigh.fit(pixels_list)
+        for (p, q), [valid, coord] in pixels.items():
+            if valid:
+                match_idxs = neigh.kneighbors([(p, q)], 4, return_distance=False)
+                for match_idx in match_idxs.squeeze().tolist()[1:]:
+                    x, y = pixels_list[match_idx]
+                    if (x, y) in pixels and pixels[(x, y)][0]:
+                        c1, c2 = coord, pixels[(x, y)][1]
+                        if c1.z - c2.z > M_depth:
+                            pixels[(x, y)][0] = False
+                        elif c1.z - c2.z < -M_depth:
+                            pixels[(p, q)][0] = False
+                # radii = range(1, M_pix+1)
+                # for r in radii:
+                #     a = 0
+                #     while(a <2*pi):
+                #       x = round(p + r*cos(a))
+                #       y = round(q + r*sin(a))
+                #       if (x, y) in pixels and pixels[(x, y)][0]:
+                #           c1, c2 = coord, pixels[(x, y)][1]
+                #           if c1.z - c2.z > M_depth:
+                #               pixels[(x, y)][0] = False
+                #           elif c1.z - c2.z < -M_depth:
+                #               pixels[(p, q)][0] = False
+                #       a += pi/10
+        final_pixs = [[k, v[0]] for k, v in pixels.items()]
         bpy.context.scene.world.color = (1, 1, 1)
         bpy.context.scene.render.display_mode
         bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
@@ -241,7 +270,7 @@ class RopeRenderer:
         bpy.context.scene.sequencer_colorspace_settings.name = 'XYZ'
         if self.save:
             color_filename = "{0:06d}_rgb.png".format(self.i)
-            self.knots_info[self.i] = pixels
+            self.knots_info[self.i] = final_pixs
             self.i += 1
             bpy.context.scene.render.image_settings.file_format='PNG'
             bpy.context.scene.render.filepath = "./images/{}".format(color_filename)
@@ -267,4 +296,4 @@ class RopeRenderer:
 
 if __name__ == '__main__':
     renderer = RopeRenderer(rope_radius=0.04, rope_screw_offset=10, bezier_scale=2.7, bezier_subdivisions=13, save=True)
-    renderer.run(3730)
+    renderer.run(5)

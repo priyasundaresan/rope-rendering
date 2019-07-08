@@ -12,7 +12,7 @@ def show_knots(idx, knots_info, save=True):
 	img = cv2.imread('images/{}'.format(image_filename))
 	pixels = knots_info[str(idx)]
 	for i in range(len(pixels)):
-		# if pixels[i][1]:
+		print(i, pixels[i])
 		valid = pixels[i][1]
 		(u, v) = pixels[i][0]
 		val = 255 * i/len(pixels)
