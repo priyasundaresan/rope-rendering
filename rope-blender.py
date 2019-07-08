@@ -198,6 +198,7 @@ class RopeRenderer:
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
         coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::50]]
+        print("%d Vertices" % len(coords))
         pixels = []
         scene.render.resolution_percentage = 100
         render_scale = scene.render.resolution_percentage / 100
@@ -207,6 +208,7 @@ class RopeRenderer:
                 int(scene.render.resolution_x * render_scale),
                 int(scene.render.resolution_y * render_scale),
                 )
+
         for j in range(len(coords)):
             coord = coords[j]
             co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, coord)
@@ -225,8 +227,8 @@ class RopeRenderer:
                 px_valid = pixels[i][1]
                 if px_valid:
                     if self.dist(p, px) < M_pix:
-                        if abs(coords[j][2] - coords[i][2]) > M_depth:
-                            if coords[j][2] < coords[i][2]:
+                        if abs(coords[j].z - coords[i].z) > M_depth:
+                            if coords[j].z < coords[i].z:
                                 valid = False
                                 break
                             else:
@@ -265,4 +267,4 @@ class RopeRenderer:
 
 if __name__ == '__main__':
     renderer = RopeRenderer(rope_radius=0.04, rope_screw_offset=10, bezier_scale=2.7, bezier_subdivisions=13, save=True)
-    renderer.run(3)
+    renderer.run(3730)
