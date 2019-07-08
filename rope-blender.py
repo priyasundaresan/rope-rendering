@@ -212,7 +212,7 @@ class RopeRenderer:
 
         for i in range(len(coords)):
             coord = coords[i]
-            co_2d = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, coord)
+            camera_coord = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, coord)
             # If you want pixel coords
             render_scale = scene.render.resolution_percentage / 100
             scene.render.resolution_x = 640
@@ -221,7 +221,7 @@ class RopeRenderer:
                     int(scene.render.resolution_x * render_scale),
                     int(scene.render.resolution_y * render_scale),
                     )
-            p = (round(co_2d.x * render_size[0]), round(render_size[1] - co_2d.y * render_size[1]))
+            p = (round(camera_coord.x * render_size[0]), round(render_size[1] - camera_coord.y * render_size[1]))
             valid = True
             # for i in range(len(pixels)):
             #     px = pixels[i][0]
@@ -234,17 +234,17 @@ class RopeRenderer:
             #                     break
             #                 else:
             #                     pixels[i][1] = False
-            pixels[p] = [valid, coord]
+            pixels[p] = [valid, camera_coord]
         neigh = NearestNeighbors(2, M_pix)
         pixels_list = list(pixels.keys())
         neigh.fit(pixels_list)
-        for (p, q), [valid, coord] in pixels.items():
+        for (p, q), [valid, camera_coord] in pixels.items():
             if valid:
-                match_idxs = neigh.kneighbors([(p, q)], 4, return_distance=False)
+                match_idxs = neigh.kneighbors([(p, q)], 2, return_distance=False)
                 for match_idx in match_idxs.squeeze().tolist()[1:]:
                     x, y = pixels_list[match_idx]
                     if (x, y) in pixels and pixels[(x, y)][0]:
-                        c1, c2 = coord, pixels[(x, y)][1]
+                        c1, c2 = camera_coord, pixels[(x, y)][1]
                         if c1.z - c2.z > M_depth:
                             pixels[(x, y)][0] = False
                         elif c1.z - c2.z < -M_depth:
