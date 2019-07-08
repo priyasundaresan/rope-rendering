@@ -194,12 +194,15 @@ class RopeRenderer:
         return min(range(len(coords)), key=lambda c: self.dist(c, p))
 
     def render_single_scene(self, M_pix=10, M_depth=0.2):
-		# Produce a single image of the current scene, save the bezier knot pixel coordinates
+		# Produce a single image of the current scene, save the mesh vertex pixel coords
         scene = bpy.context.scene
+        # Dependency graph used to get mesh vertex coords after deformation
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
+        # Get vertices in world space
         coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::50]]
         print("%d Vertices" % len(coords))
+        # Convert all vertices to pixel space
         pixels = {}
         scene.render.resolution_percentage = 100
         render_scale = scene.render.resolution_percentage / 100
@@ -209,11 +212,9 @@ class RopeRenderer:
                 int(scene.render.resolution_x * render_scale),
                 int(scene.render.resolution_y * render_scale),
                 )
-
         for i in range(len(coords)):
             coord = coords[i]
             camera_coord = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, coord)
-            # If you want pixel coords
             render_scale = scene.render.resolution_percentage / 100
             scene.render.resolution_x = 640
             scene.render.resolution_y = 480
@@ -222,46 +223,25 @@ class RopeRenderer:
                     int(scene.render.resolution_y * render_scale),
                     )
             p = (round(camera_coord.x * render_size[0]), round(render_size[1] - camera_coord.y * render_size[1]))
-            valid = True
-            # for i in range(len(pixels)):
-            #     px = pixels[i][0]
-            #     px_valid = pixels[i][1]
-            #     if px_valid:
-            #         if self.dist(p, px) < M_pix:
-            #             if abs(coords[j].z - coords[i].z) > M_depth:
-            #                 if coords[j].z < coords[i].z:
-            #                     valid = False
-            #                     break
-            #                 else:
-            #                     pixels[i][1] = False
-            pixels[p] = [valid, camera_coord]
+            valid = True # Valid = True means 'this pixel is unoccluded'
+            pixels[p] = [valid, camera_coord] # For each pixel, store whether it is valid + the camera coordinate (to get Z for depth comparison)
+        # Run kNN on mesh vertex pixels
         neigh = NearestNeighbors(2, M_pix)
         pixels_list = list(pixels.keys())
         neigh.fit(pixels_list)
+        # Prune out occluded pixels
         for (p, q), [valid, camera_coord] in pixels.items():
             if valid:
                 match_idxs = neigh.kneighbors([(p, q)], 2, return_distance=False)
-                for match_idx in match_idxs.squeeze().tolist()[1:]:
+                for match_idx in match_idxs.squeeze().tolist()[1:]: # Get k neighbors, not including the original pixel (p, q)
                     x, y = pixels_list[match_idx]
                     if (x, y) in pixels and pixels[(x, y)][0]:
                         c1, c2 = camera_coord, pixels[(x, y)][1]
+                        # If one mesh vertex is below another, its pixel coord is invalid
                         if c1.z - c2.z > M_depth:
                             pixels[(x, y)][0] = False
                         elif c1.z - c2.z < -M_depth:
                             pixels[(p, q)][0] = False
-                # radii = range(1, M_pix+1)
-                # for r in radii:
-                #     a = 0
-                #     while(a <2*pi):
-                #       x = round(p + r*cos(a))
-                #       y = round(q + r*sin(a))
-                #       if (x, y) in pixels and pixels[(x, y)][0]:
-                #           c1, c2 = coord, pixels[(x, y)][1]
-                #           if c1.z - c2.z > M_depth:
-                #               pixels[(x, y)][0] = False
-                #           elif c1.z - c2.z < -M_depth:
-                #               pixels[(p, q)][0] = False
-                #       a += pi/10
         final_pixs = [[k, v[0]] for k, v in pixels.items()]
         bpy.context.scene.world.color = (1, 1, 1)
         bpy.context.scene.render.display_mode
