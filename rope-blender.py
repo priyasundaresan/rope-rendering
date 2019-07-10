@@ -59,15 +59,15 @@ class RopeRenderer:
         for block in bpy.data.meshes:
             if block.users == 0:
                 bpy.data.meshes.remove(block)
-        # for block in bpy.data.materials:
-        #     if block.users == 0:
-        #         bpy.data.materials.remove(block)
-        # for block in bpy.data.textures:
-        #     if block.users == 0:
-        #         bpy.data.textures.remove(block)
-        # for block in bpy.data.images:
-        #     if block.users == 0:
-        #         bpy.data.images.remove(block)
+        for block in bpy.data.materials:
+            if block.users == 0:
+                bpy.data.materials.remove(block)
+        for block in bpy.data.textures:
+            if block.users == 0:
+                bpy.data.textures.remove(block)
+        for block in bpy.data.images:
+            if block.users == 0:
+                bpy.data.images.remove(block)
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete()
@@ -202,7 +202,7 @@ class RopeRenderer:
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
         # Get vertices in world space
-        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::25]]
+        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::20]]
         print("%d Vertices" % len(coords))
         # Convert all vertices to pixel space
         pixels = {}
@@ -229,7 +229,7 @@ class RopeRenderer:
             pixels[i] = [p, valid, camera_coord]
             # pixels[p] = [valid, camera_coord] # For each pixel, store whether it is valid + the camera coordinate (to get Z for depth comparison)
         # Run kNN on mesh vertex pixels
-        neigh = NearestNeighbors(4, M_pix)
+        neigh = NearestNeighbors(2, M_pix)
         # pixels_list = list(pixels.keys())
         pixels_list = [v[0] for v in pixels.values()]
         neigh.fit(pixels_list)
@@ -238,7 +238,7 @@ class RopeRenderer:
         for j in pixels:
             (p, q), valid, camera_coord = pixels[j]
             if valid:
-                match_idxs = neigh.kneighbors([(p, q)], 4, return_distance=False)
+                match_idxs = neigh.kneighbors([(p, q)], 2, return_distance=False)
                 for match_idx in match_idxs.squeeze().tolist()[1:]: # Get k neighbors, not including the original pixel (p, q)
                     # x, y = pixels_list[match_idx]
                     x, y = pixels[match_idx][0]
@@ -250,8 +250,6 @@ class RopeRenderer:
                         elif c1.z - c2.z < -M_depth:
                             pixels[j][1] = False
         final_pixs = [[v[0], v[1]] for v in pixels.values()]
-        print(len(final_pixs))
-        # final_pixs = [[k, v[0]] for k, v in pixels.items()]
         if self.save_rgb:
             scene.world.color = (1, 1, 1)
             scene.render.display_mode
@@ -269,8 +267,12 @@ class RopeRenderer:
             depth_filename = "{0:06d}_depth.png".format(self.i)
             scene.use_nodes = True
             tree = bpy.context.scene.node_tree
+            for node in tree.nodes:
+                if node.name != "Render Layers":
+                    tree.nodes.remove(node)
             links = tree.links
             render_node = tree.nodes["Render Layers"]
+            norm_node = tree.nodes.new(type="CompositorNodeNormalize")
             norm_node = tree.nodes.new(type="CompositorNodeNormalize")
             inv_node = tree.nodes.new(type="CompositorNodeInvert")
             viewer_node = tree.nodes.new(type="CompositorNodeViewer")
@@ -304,4 +306,4 @@ class RopeRenderer:
 
 if __name__ == '__main__':
     renderer = RopeRenderer(rope_radius=0.04, rope_screw_offset=10, bezier_scale=2.7, bezier_subdivisions=13, save_depth=True, save_rgb=False)
-    renderer.run(1)
+    renderer.run(20)
