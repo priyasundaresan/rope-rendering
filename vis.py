@@ -7,12 +7,11 @@ import math
 import json
 
 def show_knots(idx, knots_info, save=True):
-	image_filename = "{0:06d}_rgb.png".format(idx)
+	image_filename = "{0:06d}_depth.png".format(idx)
 	print(image_filename)
-	img = cv2.imread('images/{}'.format(image_filename))
+	img = cv2.imread('depth_images/{}'.format(image_filename))
 	pixels = knots_info[str(idx)]
 	for i in range(len(pixels)):
-		print(i, pixels[i])
 		valid = pixels[i][1]
 		(u, v) = pixels[i][0]
 		val = 255 * i/len(pixels)
@@ -28,12 +27,12 @@ def show_knots(idx, knots_info, save=True):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--num', type=int, default=len(os.listdir('./images')) - 1)
+    parser.add_argument('-n', '--num', type=int, default=len(os.listdir('./depth_images')) - 2)
     args = parser.parse_args()
     print("parsed")
     # with open("images/knots_info.yaml", "r") as stream:
 	   #  knots_info = yaml.safe_load(stream)
-    with open("images/knots_info.json", "r") as stream:
+    with open("depth_images/knots_info.json", "r") as stream:
     	knots_info = json.load(stream)
     print("loaded knots info")
     for i in range(args.num):
