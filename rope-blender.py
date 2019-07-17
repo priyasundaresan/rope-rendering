@@ -7,6 +7,7 @@ import yaml
 import json
 import numpy as np
 import os
+import time
 from sklearn.neighbors import NearestNeighbors
 
 class RopeRenderer:
@@ -162,7 +163,7 @@ class RopeRenderer:
         self.bezier_points[p0 + 2].co.y += y_shift
         self.bezier_points[p0 + 2].co.z += self.rope_radius
         self.bezier_points[p0 + 1].co.x, self.bezier_points[p0 + 2].co.x = self.bezier_points[p0 + 2].co.x, self.bezier_points[p0 + 1].co.x
-
+        return set(range(p0, p0 + 5))
 
     def randomize_nodes(self, num, offset_min, offset_max, nonplanar=False, offlimit_indices=set()):
         # Random select num knots, pull them in a random direction (constrained by offset_min, offset_max)
@@ -195,14 +196,15 @@ class RopeRenderer:
     def closest_coord_from_list(self, p, coords):
         return min(range(len(coords)), key=lambda c: self.dist(c, p))
 
-    def render_single_scene(self, M_pix=10, M_depth=0.2):
+    def render_single_scene(self, M_pix=20, M_depth=0.2):
 		# Produce a single image of the current scene, save_rgb the mesh vertex pixel coords
         scene = bpy.context.scene
         # Dependency graph used to get mesh vertex coords after deformation
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
         # Get vertices in world space
-        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::20]]
+        rope_deformed.data.vertices[100].co.z = 20
+        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::60]]
         print("%d Vertices" % len(coords))
         # Convert all vertices to pixel space
         pixels = {}
@@ -226,45 +228,52 @@ class RopeRenderer:
                     )
             p = (round(camera_coord.x * render_size[0]), round(render_size[1] - camera_coord.y * render_size[1]))
             valid = True # Valid = True means 'this pixel is unoccluded'
-            pixels[i] = [p, valid, camera_coord]
-            # pixels[p] = [valid, camera_coord] # For each pixel, store whether it is valid + the camera coordinate (to get Z for depth comparison)
+            pixels[i] = [p, camera_coord]
+        pixels_unoccluded = {i: [pixels[i][0]] for i in pixels}
         # Run kNN on mesh vertex pixels
-        neigh = NearestNeighbors(2, M_pix)
-        # pixels_list = list(pixels.keys())
+        neigh = NearestNeighbors(4, M_pix)
         pixels_list = [v[0] for v in pixels.values()]
         neigh.fit(pixels_list)
         # Prune out occluded pixels
         # for (p, q), [valid, camera_coord] in pixels.items():
         for j in pixels:
-            (p, q), valid, camera_coord = pixels[j]
-            if valid:
-                match_idxs = neigh.kneighbors([(p, q)], 2, return_distance=False)
-                for match_idx in match_idxs.squeeze().tolist()[1:]: # Get k neighbors, not including the original pixel (p, q)
-                    # x, y = pixels_list[match_idx]
-                    x, y = pixels[match_idx][0]
-                    if pixels[match_idx][1]:
-                        c1, c2 = camera_coord, pixels[match_idx][2]
-                        # If one mesh vertex is below another, its pixel coord is invalid
-                        if c1.z - c2.z > M_depth:
-                            pixels[match_idx][1] = False
-                        elif c1.z - c2.z < -M_depth:
-                            pixels[j][1] = False
-        final_pixs = [[v[0], v[1]] for v in pixels.values()]
+            (p, q), camera_coord = pixels[j]
+            match_idxs = neigh.kneighbors([(p, q)], 4, return_distance=False)
+            for match_idx in match_idxs.squeeze().tolist()[1:]: # Get k neighbors, not including the original pixel (p, q)
+                x, y = pixels[match_idx][0]
+                c1, c2 = camera_coord, pixels[match_idx][1]
+                # If one mesh vertex is below another, its pixel coord is invalid
+                if c1.z - c2.z > M_depth: #c1 on top by at least M_depth
+                    try:
+                        pixels_unoccluded[j].remove((p, q))
+                        pixels_unoccluded[match_idx].append((p, q))
+
+                    except:
+                        pass
+                elif c1.z - c2.z < -M_depth: #c2 on top by at least M_depth
+                    try:
+                        pixels_unoccluded[match_idx].remove((x, y))
+                        pixels_unoccluded[j].append((x, y))
+                    except:
+                        pass
+        print("Null entries", sum(1 for i in pixels_unoccluded if pixels_unoccluded[i] == []))
+        # final_pixs = [[v[0], v[1]] for v in pixels.values()]
+        # final_pixs = [item for sublist in list(pixels_unoccluded.values()) for item in sublist]
+        final_pixs = list(pixels_unoccluded.values())
+        filename = "{0:06d}_rgb.png".format(self.i)
         if self.save_rgb:
             scene.world.color = (1, 1, 1)
             scene.render.display_mode
             scene.render.engine = 'BLENDER_WORKBENCH'
             scene.display_settings.display_device = 'None'
             scene.sequencer_colorspace_settings.name = 'XYZ'
-            color_filename = "{0:06d}_rgb.png".format(self.i)
             scene.render.image_settings.file_format='PNG'
-            scene.render.filepath = "./images/{}".format(color_filename)
+            scene.render.filepath = "./images/{}".format(filename)
             bpy.ops.render.render(use_viewport = True, write_still=True)
         if self.save_depth:
             scene.render.engine = 'BLENDER_EEVEE'
             scene.eevee.taa_samples = 1
             scene.eevee.taa_render_samples = 1
-            depth_filename = "{0:06d}_depth.png".format(self.i)
             scene.use_nodes = True
             tree = bpy.context.scene.node_tree
             for node in tree.nodes:
@@ -273,7 +282,6 @@ class RopeRenderer:
             links = tree.links
             render_node = tree.nodes["Render Layers"]
             norm_node = tree.nodes.new(type="CompositorNodeNormalize")
-            norm_node = tree.nodes.new(type="CompositorNodeNormalize")
             inv_node = tree.nodes.new(type="CompositorNodeInvert")
             viewer_node = tree.nodes.new(type="CompositorNodeViewer")
             composite = tree.nodes.new(type = "CompositorNodeComposite")
@@ -281,29 +289,59 @@ class RopeRenderer:
             links.new(inv_node.outputs[0], norm_node.inputs[0])
             links.new(norm_node.outputs[0], composite.inputs["Image"])
             scene.render.use_multiview = False
-            scene.render.filepath = "./depth_images/{}".format(depth_filename)
+            scene.render.filepath = "./images/{}".format(filename)
             bpy.ops.render.render(write_still=True)
         self.knots_info[self.i] = final_pixs
         self.i += 1
 
 
-    def run(self, num_images):
+    def run(self, num_images, curriculum=True):
         # Create new images folder to dump rendered images
-        os.system('rm -rf ./images')
-        os.makedirs('./images')
+        # os.system('rm -rf ./images')
+        # os.makedirs('./images')
         for i in range(num_images):
+            x = time.time()
             self.clear()
             self.add_camera()
             self.make_rigid_rope()
             self.add_rope_asymmetry()
             self.make_bezier()
-            loop_indices = self.make_simple_loop(0.2, 0.3)
-            self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
+            if curriculum:
+                if i < num_images//10:
+                    self.randomize_nodes(2, 0.2, 0.3)
+                elif i < 2*num_images//10:
+                    self.randomize_nodes(2, 0.3, 0.4)
+                elif i < 3*num_images//10:
+                    self.randomize_nodes(2, 0.3, 0.4)
+                elif i < 4*num_images//10:
+                    self.make_simple_overlap(0.1, 0.2)
+                elif i < 5*num_images//10:
+                    loop_indices = self.make_simple_overlap(0.1, 0.2)
+                    self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
+                elif i < 6*num_images//10:
+                    loop_indices = self.make_simple_overlap(0.2, 0.3)
+                    self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
+                elif i < 7*num_images//10:
+                    loop_indices = self.make_simple_loop(0.1, 0.2)
+                elif i < 8*num_images//10:
+                    loop_indices = self.make_simple_loop(0.1, 0.2)
+                    self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
+                elif i < 9*num_images//10:
+                    loop_indices = self.make_simple_loop(0.2, 0.3)
+                else:
+                    loop_indices = self.make_simple_loop(0.2, 0.3)
+                    self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
+            else:
+                self.randomize_nodes(2, 0.2, 0.4)
+            # loop_indices = self.make_simple_loop(0.2, 0.3)
+            # self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
+            # self.randomize_nodes(2, 0.2, 0.4)
             self.reposition_camera()
             self.render_single_scene(M_pix=10)
-        with open("./depth_images/knots_info.json", 'w') as outfile:
+            print("Total time for scene {}s.".format(str((time.time() - x) % 60)))
+        with open("./images/knots_info.json", 'w') as outfile:
             json.dump(self.knots_info, outfile, sort_keys=True, indent=2)
 
 if __name__ == '__main__':
-    renderer = RopeRenderer(rope_radius=0.04, rope_screw_offset=10, bezier_scale=2.7, bezier_subdivisions=13, save_depth=True, save_rgb=False)
-    renderer.run(20)
+    renderer = RopeRenderer(rope_radius=0.04, rope_screw_offset=10, bezier_scale=3.3, bezier_subdivisions=8, save_depth=False, save_rgb=True)
+    renderer.run(100, curriculum=False)
