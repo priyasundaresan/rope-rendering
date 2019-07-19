@@ -1,0 +1,43 @@
+import bpy
+from mathutils import *; from math import *
+import time
+
+# sample data
+coords = [Vector((-3.5510964393615723, 0.3658915162086487, 0.07000000774860382)),
+ Vector((-2.796715497970581, 0.3614081144332886, -0.010823898017406464)),
+ Vector((-2.3328030109405518, 0.43909183144569397, -0.030320487916469574)),
+ Vector((-1.8153064250946045, 0.3628467321395874, 2.4586913838220426e-08)),
+ Vector((-1.3640505075454712, 0.2635091245174408, -0.06222281977534294)),
+ Vector((-1.577996850013733, -0.0951085090637207, 0.04000001400709152)),
+ Vector((-1.553501009941101, -0.5219728350639343, -2.4586913838220426e-08)),
+ Vector((-1.2437081336975098, -0.2097744345664978, -0.0769551545381546)),
+ Vector((-0.9760539531707764, 0.21980789303779602, 0.0007685868768021464)),
+ Vector((-0.498802125453949, 0.29940152168273926, -1.4598481357097626e-07)),
+ Vector((-0.0953236073255539, 0.41949108242988586, 4.8405485841840346e-08)),
+ Vector((0.21371102333068848, 0.8757538795471191, 0.02469266764819622)),
+ Vector((0.40769368410110474, 1.2701462507247925, -2.3818579109047278e-08)),
+ Vector((0.7553480863571167, 1.4782966375350952, 0.0)),
+ Vector((0.6689527034759521, 1.0127454996109009, 0.06768232583999634)),
+ Vector((0.5574065446853638, 0.5873332023620605, -0.022813046351075172)),
+ Vector((0.9285074472427368, 0.3870556652545929, 0.01232124213129282)),
+ Vector((1.3656035661697388, 0.33976036310195923, 0.06308649480342865)),
+ Vector((1.9016913175582886, 0.36618563532829285, -0.000710045627783984)),
+ Vector((2.409193515777588, 0.4369889497756958, 0.029449298977851868))]
+
+bezier = bpy.data.objects['Bezier']
+bezier_points = list(bezier.data.splines[0].bezier_points)
+vertex_coords = [bezier.matrix_world.inverted() @ v for v in coords]
+
+bpy.context.view_layer.objects.active = bezier
+scene = bpy.context.scene
+for i in range(len(bezier_points)):
+    bezier_points[i].co = vertex_coords[i]
+    filename = "{0:06d}_anim.png".format(i)
+    scene.world.color = (1, 1, 1)
+    scene.render.display_mode
+    scene.render.engine = 'BLENDER_WORKBENCH'
+    scene.display_settings.display_device = 'None'
+    scene.sequencer_colorspace_settings.name = 'XYZ'
+    scene.render.image_settings.file_format='PNG'
+    scene.render.filepath = "./anim/{}".format(filename)
+    bpy.ops.render.render(use_viewport = True, write_still=True)
