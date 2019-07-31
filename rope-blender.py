@@ -11,7 +11,7 @@ import time
 from sklearn.neighbors import NearestNeighbors
 
 class RopeRenderer:
-    def __init__(self, rope_radius=0.1, rope_screw_offset=10, bezier_scale=7, bezier_subdivisions=10, save_depth=True, save_rgb=False):
+    def __init__(self, rope_radius=0.1, rope_screw_offset=10, bezier_scale=7, bezier_knots=12, save_depth=True, save_rgb=False, save_coords=False):
         """
         Initializes the Blender rope renderer
 
@@ -30,11 +30,13 @@ class RopeRenderer:
         """
         self.save_rgb = save_rgb # whether to save_rgb images or not
         self.save_depth = save_depth
+        self.save_coords = save_coords
         self.rope_radius = rope_radius # thickness of rope
-        self.rope_iterations = 1/self.rope_radius # how many "screws" are stacked lengthwise to create the rope
+        self.rope_iterations = 23;
+        # self.rope_iterations = 1/self.rope_radius # how many "screws" are stacked lengthwise to create the rope
         self.rope_screw_offset = rope_screw_offset # how tightly wound the "screw" is
         self.bezier_scale = bezier_scale # length of bezier curve
-        self.bezier_subdivisions = bezier_subdivisions # the number of splits in the bezier curve (ctrl points - 2)
+        self.bezier_subdivisions = bezier_knots - 2 # the number of splits in the bezier curve (ctrl points - 2)
         self.origin = (0, 0, 0)
         # Make objects
         self.rope = None
@@ -73,12 +75,18 @@ class RopeRenderer:
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete()
 
-    def add_camera(self):
+    def add_camera(self, fixed=True):
         # Place a camera 'randomly' (not totally random, x and y rotation is only -pi/4 to pi/4 to avoid views of the side of the rope)
-        bpy.ops.object.camera_add(location=[random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)])
-        self.camera = bpy.context.active_object
-        self.camera.name = self.camera_name
-        self.camera.rotation_euler = (random.uniform(-pi/4, pi/4), random.uniform(-pi/4, pi/4), random.uniform(-pi, pi))
+        if fixed:
+            bpy.ops.object.camera_add(location=[0, 0, 10])
+            self.camera = bpy.context.active_object
+            self.camera.rotation_euler = (0, 0, random.uniform(-pi/2, pi/2))
+            self.camera.name = self.camera_name
+        else:
+            bpy.ops.object.camera_add(location=[random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)])
+            self.camera = bpy.context.active_object
+            self.camera.name = self.camera_name
+            self.camera.rotation_euler = (random.uniform(-pi/4, pi/4), random.uniform(-pi/4, pi/4), random.uniform(-pi, pi))
         bpy.ops.object.light_add(type='SUN', radius=1, location=(0, 0, 0))
 
 
@@ -105,8 +113,9 @@ class RopeRenderer:
 
     def add_rope_asymmetry(self):
         # Add a cone and icosphere at either end, to break symmetry of the rope
-        bpy.ops.mesh.primitive_cone_add(location=(self.origin[0], self.origin[1] + 0.32, self.origin[2]))
-        bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
+        bpy.ops.mesh.primitive_uv_sphere_add(location=(self.origin[0], self.origin[1], self.origin[2]))
+        # bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
+        bpy.ops.transform.resize(value=(0.45, 0.45, 0.45))
         bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.join()
@@ -181,14 +190,25 @@ class RopeRenderer:
                 if random.uniform(0, 1) < 0.5:
                     offset_z *= -1
                 knot.co.z += offset_z
-            knot.co.y += offset_y
-            knot.co.x += offset_x
+            res_y = knot.co.y + offset_y
+            res_x = knot.co.x + offset_x
+            # self.bezier_points[-1].co.x = max(self.bezier_points[0].co.x, 0.5)
+            # self.bezier_points[0].co.x = min(self.bezier_points[0].co.x, -0.5)
+            # self.bezier_points[-1].co.y = max(self.bezier_points[0].co.y, 0.5)
+            # self.bezier_points[0].co.y = min(self.bezier_points[0].co.y, -0.5)
+            knot.co.y = res_y
+            knot.co.x = res_x
 
 
     def reposition_camera(self):
         # Orient camera towards the rope
         bpy.context.scene.camera = self.camera
         bpy.ops.view3d.camera_to_view_selected()
+
+
+    def average_position(self, coords):
+        return np.mean(coords, axis=0)
+
 
     def dist(self, p1, p2):
         return np.linalg.norm(np.array(p1) - np.array(p2))
@@ -203,8 +223,7 @@ class RopeRenderer:
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
         # Get vertices in world space
-        rope_deformed.data.vertices[100].co.z = 20
-        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::60]]
+        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::50]]
         print("%d Vertices" % len(coords))
         # Convert all vertices to pixel space
         pixels = {}
@@ -216,6 +235,7 @@ class RopeRenderer:
                 int(scene.render.resolution_x * render_scale),
                 int(scene.render.resolution_y * render_scale),
                 )
+
         for i in range(len(coords)):
             coord = coords[i]
             camera_coord = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, coord)
@@ -229,13 +249,15 @@ class RopeRenderer:
             p = (round(camera_coord.x * render_size[0]), round(render_size[1] - camera_coord.y * render_size[1]))
             valid = True # Valid = True means 'this pixel is unoccluded'
             pixels[i] = [p, camera_coord]
-        pixels_unoccluded = {i: [pixels[i][0]] for i in pixels}
+
+        pixels_unoccluded = {i: [pixels[i][0]] for i in pixels} # comment back in for occlusion
         # Run kNN on mesh vertex pixels
         neigh = NearestNeighbors(4, M_pix)
         pixels_list = [v[0] for v in pixels.values()]
+
+        #Prune out occluded pixels
+
         neigh.fit(pixels_list)
-        # Prune out occluded pixels
-        # for (p, q), [valid, camera_coord] in pixels.items():
         for j in pixels:
             (p, q), camera_coord = pixels[j]
             match_idxs = neigh.kneighbors([(p, q)], 4, return_distance=False)
@@ -257,8 +279,7 @@ class RopeRenderer:
                     except:
                         pass
         print("Null entries", sum(1 for i in pixels_unoccluded if pixels_unoccluded[i] == []))
-        # final_pixs = [[v[0], v[1]] for v in pixels.values()]
-        # final_pixs = [item for sublist in list(pixels_unoccluded.values()) for item in sublist]
+
         final_pixs = list(pixels_unoccluded.values())
         filename = "{0:06d}_rgb.png".format(self.i)
         if self.save_rgb:
@@ -297,8 +318,8 @@ class RopeRenderer:
 
     def run(self, num_images, curriculum=True):
         # Create new images folder to dump rendered images
-        # os.system('rm -rf ./images')
-        # os.makedirs('./images')
+        os.system('rm -rf ./images')
+        os.makedirs('./images')
         for i in range(num_images):
             x = time.time()
             self.clear()
@@ -307,12 +328,11 @@ class RopeRenderer:
             self.add_rope_asymmetry()
             self.make_bezier()
             if curriculum:
-                if i < num_images//10:
-                    self.randomize_nodes(2, 0.2, 0.3)
-                elif i < 2*num_images//10:
-                    self.randomize_nodes(2, 0.3, 0.4)
+                self.randomize_nodes(4, 0.1, 0.2, offlimit_indices=set((0, len(self.bezier_points) - 1)))
+                if i < 2*num_images//10:
+                    self.randomize_nodes(2, 0.1, 0.2)
                 elif i < 3*num_images//10:
-                    self.randomize_nodes(2, 0.3, 0.4)
+                    self.randomize_nodes(2, 0.2, 0.3)
                 elif i < 4*num_images//10:
                     self.make_simple_overlap(0.1, 0.2)
                 elif i < 5*num_images//10:
@@ -332,16 +352,15 @@ class RopeRenderer:
                     loop_indices = self.make_simple_loop(0.2, 0.3)
                     self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
             else:
-                self.randomize_nodes(2, 0.2, 0.4)
-            # loop_indices = self.make_simple_loop(0.2, 0.3)
-            # self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
-            # self.randomize_nodes(2, 0.2, 0.4)
+                # loop_indices = self.make_simple_loop(0.2, 0.3)
+                self.randomize_nodes(3, 0.2, 0.4)
             self.reposition_camera()
             self.render_single_scene(M_pix=10)
             print("Total time for scene {}s.".format(str((time.time() - x) % 60)))
-        with open("./images/knots_info.json", 'w') as outfile:
-            json.dump(self.knots_info, outfile, sort_keys=True, indent=2)
+        if self.save_depth or self.save_rgb:
+            with open("./images/knots_info.json", 'w') as outfile:
+                json.dump(self.knots_info, outfile, sort_keys=True, indent=2)
 
 if __name__ == '__main__':
-    renderer = RopeRenderer(rope_radius=0.04, rope_screw_offset=10, bezier_scale=3.3, bezier_subdivisions=8, save_depth=False, save_rgb=True)
-    renderer.run(100, curriculum=False)
+    renderer = RopeRenderer(rope_radius=0.07, rope_screw_offset=10, bezier_scale=5, bezier_knots=10, save_depth=True, save_rgb=False, save_coords=False)
+    renderer.run(3600, curriculum=False)
