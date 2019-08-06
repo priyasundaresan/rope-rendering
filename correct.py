@@ -15,28 +15,19 @@ for f in os.listdir('./{}'.format(args.dir)):
     if not 'png' in f:
         continue
     img = cv2.imread('./{}/'.format(args.dir) + f, 0)
-    img2 = img.copy()
-    img2 = cv2.morphologyEx(img2, cv2.MORPH_CLOSE, np.ones((6, 6), np.uint8))
-    _, mask = cv2.threshold(img2, 127, 255, cv2.THRESH_BINARY)
-    clahe = cv2.createCLAHE(clipLimit=10.0, tileGridSize=(60, 60))
-    img2 = clahe.apply(img2)
-    img2 = cv2.bitwise_not(img2, mask=mask)
-    #s_min = np.amin(img2[np.where((img2!=[np.amin(img2)]))])
-    #s_max = np.amax(img2[np.where((img2!=[np.amax(img2)]))])
-    #t_min = np.amin(template[np.where((template!=[np.amin(template)]))])
-    #t_max = np.amax(template[np.where((template!=[np.amax(template)]))])
-    img2[np.where((img2 != [0]))] += 25
-    #img2 = cv2.bilateralFilter(img2,9,75,75)
-#    m = interp1d([s_max, s_min],[t_min, t_max])
-#    for val in range(s_min, s_max):
-#        img2[np.where((img2==[val]))] = [m(val).squeeze()]
-        
-    #cv2.imwrite("mask.png", template)
-    #matched = match_histograms(img2, template, multichannel=False)
-#    matched[np.where((matched == np.amin(matched)))] = 0
+    #img2 = img.copy()
+    #img2 = cv2.morphologyEx(img2, cv2.MORPH_CLOSE, np.ones((6, 6), np.uint8)) # close artifacts/black spots
+    #_, mask = cv2.threshold(img2, 127, 255, cv2.THRESH_BINARY)
+    #clahe = cv2.createCLAHE(clipLimit=10.0, tileGridSize=(60, 60)) # bring back texture to depth img, contrast adaptive hist eq.
+    #img2 = clahe.apply(img2)
+    #img2 = cv2.bitwise_not(img2, mask=mask) # the depth in real is opposite sim (closer = darker), adjusts for this
+    #s_med = np.mean(img2[np.where((img2>[50]))]) # get the mean pixel value of the real rope
+    #t_med = np.mean(template[np.where((template>[50]))]) # get the mean pixel value of sim rope
+    ##img2[np.where((img2 != [0]))] += int(t_med) - int(s_med) # adjust real range to better match sim
+    #img2[np.where((img2 != [0]))] += 70 # adjust real range to better match sim
+#    img2 = cv2.normalize(img2, None, 0, 255, cv2.NORM_MINMAX)
+    img2 = img
+    img2 = cv2.resize(img2,(640,480))
     cv2.imwrite('./{}/output/'.format(args.dir) + f, img2)
-#cv2.imshow('dst', img2)                          
-#cv2.waitKey(0)                                  
-#cv2.destroyAllWindows()
     
 

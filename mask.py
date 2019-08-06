@@ -3,9 +3,10 @@ import numpy as np
 import os
 import argparse
 
-def mask(image_filename):
-	img = cv2.imread('./images/{}'.format(image_filename))
-	img[np.where((img == [255, 255, 255]).all(axis = 2))] = [0, 0, 0]
+def mask(image_filename, directory):
+	img_original = cv2.imread('./%s/%s'%(directory, image_filename))
+	img = img_original.copy()
+	img[np.where((img < [5, 5, 5]).all(axis = 2))] = [0, 0, 0]
 	img[np.where((img != [0, 0, 0]).all(axis = 2))] = [1, 1, 1]
 	mask = img
 	visible_mask = img * 255
@@ -16,9 +17,14 @@ def mask(image_filename):
 
 
 if __name__ == '__main__':
-	for filename in os.listdir('./images'):
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-d', '--dir', type=str, default='images')
+	args = parser.parse_args()
+	os.system('rm -rf ./image_masks')
+	os.makedirs('./image_masks')
+	for filename in os.listdir('./{}'.format(args.dir)):
 		try:
 			print("Masking %s" % filename)
-			mask(filename)
+			mask(filename, args.dir)
 		except:
 			print("Done")
