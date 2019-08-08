@@ -1,7 +1,7 @@
 # rope-rendering
 
-## rope-blender.py
 ### Dependencies
+All in Python3:
 * Blender (beta version 2.8) (Download here: https://www.blender.org/download/Blender2.80/blender-2.80-macOS.dmg/)
 * cv2
 * argparse
@@ -20,6 +20,7 @@
 * Add the following line to your .bashrc: 
   * `alias blender="/Users/priyasundaresan/Downloads/blender-2.80.0-git20190620.d30f72dfd8ac-x86_64/blender.app/Contents/MacOS/blender"` replacing the path to blender.app with your downloaded version
 * `cd` into the following directory: `/Users/priyasundaresan/Downloads/blender-2.80.0-git20190620.d30f72dfd8ac-x86_64/blender.app/Contents/Resources/2.80/python/bin`
+* To install dependencies, optionally make a python3 virtualenv, navigate into `rope-rendering` and run pip3 install -r requirements.txt
 
 ### Rendering Usage
 * Off-screen rendering: run `blender -b -P rope-blender.py` (-b signals --background, -P signals --python)
