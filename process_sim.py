@@ -2,6 +2,7 @@ import numpy as np
 import os
 import cv2
 from scipy.interpolate import interp1d
+
 def noisy(noise_typ,image,mask=None):
     if noise_typ == "gauss":
         row,col= image.shape
@@ -62,13 +63,11 @@ def generate_perlin_noise_2d(shape, res=(12, 16)):
     n1 = n01*(1-t[:,:,0]) + t[:,:,0]*n11
     return np.sqrt(2)*((1-t[:,:,1])*n0 + t[:,:,1]*n1)
 
-
-
 if __name__ == '__main__':
     os.system('rm -rf ./images_noisy')
     os.makedirs('./images_noisy')
-    a, b = 207, 120
-    c, d = 137, 156
+    a, b = 207, 120 # a hack!! this is the range of values on the rope in sim (roughly)
+    c, d = 137, 156 # a hack!! this is the range of values on the rope in real (roughly)
     m = interp1d([a,b],[c,d]) 
     for f in os.listdir('./images'):
         if 'png' in f:
@@ -85,8 +84,7 @@ if __name__ == '__main__':
             perlin_random = generate_perlin_noise_2d(img.shape)
             perlin_random[np.where((img == [0]))] = [0]
             #img += cv2.normalize(perlin_random, None, -10, 10, cv2.NORM_MINMAX).astype('uint8')
-            for val in range(b, a+1):
-                img[np.where((img == [val]))] = [int(m(val))]
+            for val in range(b, a+1): #TODO: there should be a way to make this run in parallel
             if np.random.uniform() < 0.5:
                 mode = 'gauss'
             else:
