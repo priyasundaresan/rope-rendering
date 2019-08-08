@@ -69,6 +69,11 @@ if __name__ == '__main__':
     a, b = 207, 120 # a hack!! this is the range of values on the rope in sim (roughly)
     c, d = 137, 156 # a hack!! this is the range of values on the rope in real (roughly)
     m = interp1d([a,b],[c,d]) 
+    if not os.path.exists("./images_noisy"):
+        os.makedirs('./images_noisy')
+    else:
+        os.system("rm -rf ./images_noisy")
+        os.makedirs("./images_noisy")
     for f in os.listdir('./images'):
         if 'png' in f:
             print(f)
@@ -85,6 +90,7 @@ if __name__ == '__main__':
             perlin_random[np.where((img == [0]))] = [0]
             #img += cv2.normalize(perlin_random, None, -10, 10, cv2.NORM_MINMAX).astype('uint8')
             for val in range(b, a+1): #TODO: there should be a way to make this run in parallel
+                img[np.where((img == [val]))] = [m(val)]
             if np.random.uniform() < 0.5:
                 mode = 'gauss'
             else:

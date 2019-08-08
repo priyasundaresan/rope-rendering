@@ -374,4 +374,4 @@ class RopeRenderer:
 
 if __name__ == '__main__':
     renderer = RopeRenderer(rope_radius=0.07, rope_screw_offset=10, bezier_scale=5, bezier_knots=10, save_depth=True, save_rgb=False, save_coords=False)
-    renderer.run(100, curriculum=False)
+    renderer.run(10, curriculum=False)

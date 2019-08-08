@@ -20,8 +20,11 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-d', '--dir', type=str, default='images')
 	args = parser.parse_args()
-	os.system('rm -rf ./image_masks')
-	os.makedirs('./image_masks')
+	if not os.path.exists("./image_masks"):
+		os.makedirs('./image_masks')
+	else:
+		os.system('rm -rf ./image_masks')
+		os.makedirs('./image_masks')
 	for filename in os.listdir('./{}'.format(args.dir)):
 		try:
 			print("Masking %s" % filename)

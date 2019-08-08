@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import argparse
-import yaml
 import os
 import math
 import json
@@ -12,15 +11,8 @@ def show_knots(idx, knots_info, save=True):
 	img = cv2.imread('images/{}'.format(image_filename))
 	pixels = knots_info[str(idx)]
 	for i in range(len(pixels)):
-		# valid = pixels[i][1]
-		# (u, v) = pixels[i][0]
 		for (u, v) in pixels[i]:
-		# (u, v) = pixels[i]
 			val = 255 * i/len(pixels)
-			# if valid:
-			# 	color = (val, 255 - val, 255)
-			# else:
-			# 	color = (255, 255, 255)
 			color = (val, 255 - val, 255)
 			cv2.circle(img,(int(u), int(v)), 1, color, -1)
 
@@ -33,9 +25,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--num', type=int, default=len(os.listdir('./images')) - 1)
     args = parser.parse_args()
+    if not os.path.exists("./annotated"):
+        os.makedirs('./annotated')
+    else:
+        os.system("rm -rf ./annotated")
+        os.makedirs("./annotated")
     print("parsed")
-    # with open("images/knots_info.yaml", "r") as stream:
-	   #  knots_info = yaml.safe_load(stream)
     with open("images/knots_info.json", "r") as stream:
     	knots_info = json.load(stream)
     print("loaded knots info")
