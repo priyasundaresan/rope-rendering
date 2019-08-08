@@ -25,8 +25,8 @@ All in Python3:
 ### Rendering Usage
 * Off-screen rendering: run `blender -b -P rope-blender.py` (-b signals --background, -P signals --python)
 * On-screen rendering: run `blender -P rope-blender.py`
-* For debugging purposes, you can also open a scripting window in Blender, copy or load `rope-blender.py` and hit `Run Script`
-  * To manually deform the rope, select the spline in `'EDIT'` mode, press `'G'`, and grab any of the spline nodes with a mouse to move the rope. You can select groups of nodes at a time by pressing `'Ctrl'` while grabbing nodes.
+* For debugging purposes, you can also open a scripting window in Blender (on the top nav-bar menu, look for `Scripting`), copy or load `rope-blender.py` and hit `Run Script`
+  * To manually deform the rope, select the spline in `'EDIT'` mode (by pressing `Tab`), press `'G'`, and grab any of the spline nodes with a mouse to move the rope. You can select groups of nodes at a time by pressing `'Ctrl'` while grabbing nodes.
 
 ### Example Workflow
 * Run `blender -b -P rope-blender.py`
