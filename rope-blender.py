@@ -3,7 +3,6 @@ from math import *
 import pprint
 from mathutils import *
 import random
-import yaml
 import json
 import numpy as np
 import os
