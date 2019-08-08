@@ -87,7 +87,7 @@ class RopeRenderer:
         if fixed:
             bpy.ops.object.camera_add(location=[0, 0, 10])
             self.camera = bpy.context.active_object
-            self.camera.rotation_euler = (0, 0, random.uniform(-pi/2, pi/2))
+            self.camera.rotation_euler = (0, 0, random.uniform(-pi/2, pi/2)) # fixed z, rotate only about x/y axis
             self.camera.name = self.camera_name
         else:
             bpy.ops.object.camera_add(location=[random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)])
@@ -233,7 +233,7 @@ class RopeRenderer:
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
         # Get vertices in world space
-        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::20]]
+        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::20]] # TODO: this is actually where i specify how many vertices to export (play around with :20); will standardize this
         print("%d Vertices" % len(coords))
         # Convert all vertices to pixel space
         pixels = {}
@@ -260,7 +260,7 @@ class RopeRenderer:
             valid = True # Valid = True means 'this pixel is unoccluded'
             pixels[i] = [p, camera_coord]
 
-        pixels_unoccluded = {i: [pixels[i][0]] for i in pixels} # comment back in for occlusion
+        pixels_unoccluded = {i: [pixels[i][0]] for i in pixels} 
         # Run kNN on mesh vertex pixels
         neigh = NearestNeighbors(4, M_pix)
         pixels_list = [v[0] for v in pixels.values()]
@@ -363,8 +363,8 @@ class RopeRenderer:
                     self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
             else:
                 # loop_indices = self.make_simple_loop(0.2, 0.3)
-                self.randomize_nodes(3, 0.2, 0.4)
-                self.randomize_nodes(3, 0.2, 0.4)
+                self.randomize_nodes(3, 0.2, 0.4) # simulate pulling 3 nodes on the rope randomly
+                self.randomize_nodes(3, 0.2, 0.4) # repeat for variation
             self.reposition_camera()
             self.render_single_scene(M_pix=10)
             print("Total time for scene {}s.".format(str((time.time() - x) % 60)))
