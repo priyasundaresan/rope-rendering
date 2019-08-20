@@ -10,7 +10,7 @@ import time
 from sklearn.neighbors import NearestNeighbors
 
 class RopeRenderer:
-    def __init__(self, rope_radius=0.1, rope_screw_offset=10, bezier_scale=7, bezier_knots=12, save_depth=True, save_rgb=False, save_coords=False):
+    def __init__(self, rope_radius=None, sphere_radius=None, rope_iterations=None, rope_screw_offset=None, bezier_scale=3.7, bezier_knots=12, save_depth=True, save_rgb=False):
         """
         Initializes the Blender rope renderer
 
@@ -29,20 +29,18 @@ class RopeRenderer:
         """
         self.save_rgb = save_rgb # whether to save_rgb images or not
         self.save_depth = save_depth
-        self.save_coords = save_coords
-        #self.rope_radius = np.random.uniform(0.075, 0.1) # thickness of rope
-        #self.rope_iterations = np.random.uniform(18, 21)
-        #self.sphere_radius = np.random.uniform(0.45, 0.53)
-        self.rope_iterations = np.random.uniform(14.3, 15)
-        self.sphere_radius = np.random.uniform(0.35, 0.37)
-        #self.rope_radius = np.random.uniform(0.06, 0.08) # thickness of rope
-        self.rope_radius = np.random.uniform(0.05, 0.065) # thickness of rope
-        # self.rope_iterations = 1/self.rope_radius # how many "screws" are stacked lengthwise to create the rope
-        #self.rope_screw_offset = np.random.uniform(7, 10) # how tightly wound the "screw" is
-        self.rope_screw_offset = np.random.uniform(12.5, 14) # how tightly wound the "screw" is
-        #self.rope_screw_offset = np.random.uniform(13, 13) # how tightly wound the "screw" is
-        #self.bezier_scale = bezier_scale # length of bezier curve
-        self.bezier_scale = 4.5 # length of bezier curve
+        self.rope_radius = rope_radius
+        self.rope_screw_offset = rope_screw_offset
+        self.sphere_radius = sphere_radius
+        self.rope_iterations = rope_iterations
+        #self.rope_iterations = np.random.uniform(14.3, 15)
+        #self.sphere_radius = np.random.uniform(0.35, 0.37)
+        #self.rope_radius = np.random.uniform(0.05, 0.065) # thickness of rope
+        #self.rope_screw_offset = np.random.uniform(12.5, 14) # how tightly wound the "screw" is
+        #self.bezier_scale = 4.5 # length of bezier curve
+        self.bezier_scale = bezier_scale # length of bezier curve
+        #self.bezier_scale = 3.5
+        #self.bezier_scale = 2
         self.bezier_subdivisions = bezier_knots - 2 # the number of splits in the bezier curve (ctrl points - 2)
         self.origin = (0, 0, 0)
         # Make objects
@@ -63,8 +61,6 @@ class RopeRenderer:
     def clear(self):
         """
         Deletes any objects or meshes in the scene
-        :return:
-        :rtype:
         """
         for block in bpy.data.meshes:
             if block.users == 0:
@@ -83,11 +79,13 @@ class RopeRenderer:
         bpy.ops.object.delete()
 
     def add_camera(self, fixed=True):
-        # Place a camera 'randomly' (not totally random, x and y rotation is only -pi/4 to pi/4 to avoid views of the side of the rope)
+        '''
+        Place a camera randomly, fixed means no rotations about z axis (planar camera changes only)
+        '''
         if fixed:
             bpy.ops.object.camera_add(location=[0, 0, 10])
             self.camera = bpy.context.active_object
-            self.camera.rotation_euler = (0, 0, random.uniform(-pi/2, pi/2)) # fixed z, rotate only about x/y axis
+            self.camera.rotation_euler = (0, 0, random.uniform(-pi, pi)) # fixed z, rotate only about x/y axis
             self.camera.name = self.camera_name
         else:
             bpy.ops.object.camera_add(location=[random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)])
@@ -98,12 +96,20 @@ class RopeRenderer:
 
 
     def make_rigid_rope(self):
-        # Join 4 circles and "twist" them to create realistic rope (See this 5 min. tutorial: https://youtu.be/xYhIoiOnPj4)
+        '''
+        Join 4 circles and "twist" them to create realistic rope (See this 5 min. tutorial: https://youtu.be/xYhIoiOnPj4 if interested)
+        '''
         bpy.ops.mesh.primitive_circle_add(location=self.origin)
-        bpy.ops.transform.resize(value=(self.rope_radius, self.rope_radius, self.rope_radius))
+        #bpy.ops.transform.resize(value=(self.rope_radius, self.rope_radius, self.rope_radius))
+        if self.rope_radius is not None:
+            radius = self.rope_radius
+        else:
+            radius = np.random.uniform(0.05, 0.065)
+        bpy.ops.transform.resize(value=(radius, radius, radius))
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
-        bpy.ops.transform.translate(value=(self.rope_radius, 0, 0))
+        #bpy.ops.transform.translate(value=(self.rope_radius, 0, 0))
+        bpy.ops.transform.translate(value=(radius, 0, 0))
         bpy.ops.object.mode_set(mode='OBJECT')
         for i in range(1, 4):
             bpy.ops.object.duplicate_move(OBJECT_OT_duplicate=None, TRANSFORM_OT_translate=None)
@@ -114,17 +120,33 @@ class RopeRenderer:
         self.rope = bpy.context.active_object
         self.rope.name = self.rope_name
         bpy.ops.object.modifier_add(type='SCREW')
-        self.rope.modifiers["Screw"].screw_offset = self.rope_screw_offset
-        self.rope.modifiers["Screw"].iterations = self.rope_iterations
+        if self.rope_screw_offset is not None:
+            screw_offset = self.rope_screw_offset
+        else:
+            screw_offset = np.random.uniform(12.5, 13)
+        #self.rope.modifiers["Screw"].screw_offset = self.rope_screw_offset
+        self.rope.modifiers["Screw"].screw_offset = screw_offset 
+        #self.rope.modifiers["Screw"].iterations = self.rope_iterations
+        if self.rope_iterations is not None:
+            rope_iterations = self.rope_iterations
+        else:
+            rope_iterations = np.random.uniform(14.3, 15)
+        self.rope.modifiers["Screw"].iterations = rope_iterations
         bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Screw")
 
     def add_rope_asymmetry(self):
-        # Add a cone and icosphere at either end, to break symmetry of the rope
+        '''
+        Add sphere, to break symmetry of the rope
+        '''
         bpy.ops.mesh.primitive_uv_sphere_add(location=(self.origin[0], self.origin[1], self.origin[2]))
         # bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
-        val = self.sphere_radius
+        #val = self.sphere_radius
+        if self.sphere_radius is not None:
+            sphere_radius = self.sphere_radius
+        else:
+            sphere_radius = np.random.uniform(0.35, 0.37)
 #        bpy.ops.transform.resize(value=(0.45, 0.45, 0.45))
-        bpy.ops.transform.resize(value=(val, val, val))
+        bpy.ops.transform.resize(value=(sphere_radius, sphere_radius, sphere_radius))
         bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.join()
@@ -132,7 +154,9 @@ class RopeRenderer:
         self.rope_asymm.name= self.rope_asymm_name
 
     def make_bezier(self):
-        # Create bezier curve
+        '''
+        Create bezier curve
+        '''
         bpy.ops.curve.primitive_bezier_curve_add(location=self.origin)
         bpy.ops.transform.resize(value=(self.bezier_scale, self.bezier_scale, self.bezier_scale))
         bpy.ops.object.mode_set(mode='EDIT')
@@ -161,14 +185,14 @@ class RopeRenderer:
         # Make simple cubic loop (4 control points)  + 2 more control points to pull slack through the loop
         p0 = np.random.choice(range(len(self.bezier_points) - 5))
         y_shift = random.uniform(offset_min, offset_max)
-        self.bezier_points[p0 + 1].co.y += y_shift
+        self.bezier_points[p0 + 1].co.y += y_shift 
         self.bezier_points[p0 + 2].co.y += y_shift
-        self.bezier_points[p0 + 2].co.z += self.rope_radius
         self.bezier_points[p0 + 1].co.x, self.bezier_points[p0 + 2].co.x = self.bezier_points[p0 + 2].co.x, self.bezier_points[p0 + 1].co.x
         self.bezier_points[p0 + 4].co.x = (self.bezier_points[p0 + 1].co.x + self.bezier_points[p0 + 2].co.x)/2
         self.bezier_points[p0 + 4].co.y = self.bezier_points[p0 + 1].co.y
-        self.bezier_points[p0 + 4].co.z -= self.rope_radius
-        self.bezier_points[p0 + 5].co = Vector((self.bezier_points[p0 + 1].co.x, (self.bezier_points[p0].co.y + self.bezier_points[p0 + 1].co.y)/2, -2*self.bezier_points[p0 + 4].co.z))
+        self.bezier_points[p0 + 1].co.z += 0.06 # TODO: sorry, this is a hack for now
+        self.bezier_points[p0 + 3].co.z += 0.06
+        self.bezier_points[p0 + 5].co = Vector((self.bezier_points[p0 + 1].co.x, (self.bezier_points[p0].co.y + self.bezier_points[p0 + 1    ].co.y)/2, 0.1)) 
         return set(range(p0, p0 + 5))
 
     def make_simple_overlap(self, offset_min, offset_max):
@@ -179,12 +203,12 @@ class RopeRenderer:
             y_shift *= -1
         self.bezier_points[p0 + 1].co.y += y_shift
         self.bezier_points[p0 + 2].co.y += y_shift
-        self.bezier_points[p0 + 2].co.z += self.rope_radius
+        self.bezier_points[p0 + 2].co.z += 0.013
         self.bezier_points[p0 + 1].co.x, self.bezier_points[p0 + 2].co.x = self.bezier_points[p0 + 2].co.x, self.bezier_points[p0 + 1].co.x
-        return set(range(p0, p0 + 5))
+        return set(range(p0, p0 + 2)) # this can be passed into offlimit_indices
 
     def randomize_nodes(self, num, offset_min, offset_max, nonplanar=False, offlimit_indices=set()):
-        # Random select num knots, pull them in a random direction (constrained by offset_min, offset_max)
+        # Simulating pulling NUM nodes on the rope by (offset_min, offset_max) amount; nonplanar indicates whether upward pulls are allowed, and offlimit_indices specifies Bezier knots that should not be touched (For instance, if you made a loop and wanted to randomize the remaining nodes on the rope)
         knots_idxs = np.random.choice(list(set(range(len(self.bezier_points))) ^ offlimit_indices), min(num, len(self.bezier_points)), replace=False)
         for idx in knots_idxs:
             knot = self.bezier_points[idx]
@@ -201,10 +225,6 @@ class RopeRenderer:
                 knot.co.z += offset_z
             res_y = knot.co.y + offset_y
             res_x = knot.co.x + offset_x
-            # self.bezier_points[-1].co.x = max(self.bezier_points[0].co.x, 0.5)
-            # self.bezier_points[0].co.x = min(self.bezier_points[0].co.x, -0.5)
-            # self.bezier_points[-1].co.y = max(self.bezier_points[0].co.y, 0.5)
-            # self.bezier_points[0].co.y = min(self.bezier_points[0].co.y, -0.5)
             knot.co.y = res_y
             knot.co.x = res_x
 
@@ -215,10 +235,9 @@ class RopeRenderer:
         bpy.ops.view3d.camera_to_view_selected()
         self.camera.location.z += np.random.uniform(1, 3)
 
-
+    # NOTE: these three funcs are general utilities, not using rn
     def average_position(self, coords):
         return np.mean(coords, axis=0)
-
 
     def dist(self, p1, p2):
         return np.linalg.norm(np.array(p1) - np.array(p2))
@@ -229,7 +248,7 @@ class RopeRenderer:
     def render_single_scene(self, M_pix=20, M_depth=0.2):
 		# Produce a single image of the current scene, save_rgb the mesh vertex pixel coords
         scene = bpy.context.scene
-        # Dependency graph used to get mesh vertex coords after deformation
+        # Dependency graph used to get mesh vertex coords after deformation (Blender's way of tracking these coords)
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
         # Get vertices in world space
@@ -250,8 +269,6 @@ class RopeRenderer:
             coord = coords[i]
             camera_coord = bpy_extras.object_utils.world_to_camera_view(scene, self.camera, coord)
             render_scale = scene.render.resolution_percentage / 100
-            scene.render.resolution_x = 640
-            scene.render.resolution_y = 480
             render_size = (
                     int(scene.render.resolution_x * render_scale),
                     int(scene.render.resolution_y * render_scale),
@@ -260,7 +277,7 @@ class RopeRenderer:
             valid = True # Valid = True means 'this pixel is unoccluded'
             pixels[i] = [p, camera_coord]
 
-        pixels_unoccluded = {i: [pixels[i][0]] for i in pixels} 
+        pixels_unoccluded = {i: [pixels[i][0]] for i in pixels}
         # Run kNN on mesh vertex pixels
         neigh = NearestNeighbors(4, M_pix)
         pixels_list = [v[0] for v in pixels.values()]
@@ -311,6 +328,7 @@ class RopeRenderer:
                 if node.name != "Render Layers":
                     tree.nodes.remove(node)
             links = tree.links
+            # Blender uses something called compositing nodes to produce depth maps; see here if interested: https://www.youtube.com/watch?v=Zd9xzPKMIWE
             render_node = tree.nodes["Render Layers"]
             norm_node = tree.nodes.new(type="CompositorNodeNormalize")
             inv_node = tree.nodes.new(type="CompositorNodeInvert")
@@ -328,8 +346,11 @@ class RopeRenderer:
 
     def run(self, num_images, curriculum=True):
         # Create new images folder to dump rendered images
-        os.system('rm -rf ./images')
-        os.makedirs('./images')
+        if not os.path.exists("./images"):
+            os.makedirs('./images')
+        else:
+            os.system('rm -rf ./images')
+            os.makedirs('./images')
         for i in range(num_images):
             x = time.time()
             self.clear()
@@ -338,33 +359,22 @@ class RopeRenderer:
             self.add_rope_asymmetry()
             self.make_bezier()
             if curriculum:
-                self.randomize_nodes(4, 0.1, 0.2, offlimit_indices=set((0, len(self.bezier_points) - 1)))
-                if i < 2*num_images//10:
-                    self.randomize_nodes(2, 0.1, 0.2)
-                elif i < 3*num_images//10:
-                    self.randomize_nodes(2, 0.2, 0.3)
-                elif i < 4*num_images//10:
-                    self.make_simple_overlap(0.1, 0.2)
-                elif i < 5*num_images//10:
-                    loop_indices = self.make_simple_overlap(0.1, 0.2)
-                    self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
-                elif i < 6*num_images//10:
-                    loop_indices = self.make_simple_overlap(0.2, 0.3)
-                    self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
-                elif i < 7*num_images//10:
-                    loop_indices = self.make_simple_loop(0.1, 0.2)
-                elif i < 8*num_images//10:
-                    loop_indices = self.make_simple_loop(0.1, 0.2)
-                    self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
-                elif i < 9*num_images//10:
-                    loop_indices = self.make_simple_loop(0.2, 0.3)
+                rand = np.random.uniform()
+                if rand < 0.33: 
+                    loop_rand = np.random.uniform(0.22, 0.32)
+                    loop_indices = self.make_simple_loop(loop_rand, loop_rand)
+                    self.randomize_nodes(3, 0.2, 0.3, offlimit_indices=loop_indices)
+                elif rand < 0.66:
+                    loop_indices = self.make_simple_overlap(0.4, 0.5)
+                    self.randomize_nodes(3, 0.2, 0.4)
+                    self.randomize_nodes(3, 0.2, 0.4)
+                    #self.randomize_nodes(3, 0.1, 0.2, offlimit_indices=loop_indices)
                 else:
-                    loop_indices = self.make_simple_loop(0.2, 0.3)
-                    self.randomize_nodes(2, 0.15, 0.35, offlimit_indices=loop_indices)
+                    self.randomize_nodes(3, 0.2, 0.4)
+                    self.randomize_nodes(3, 0.2, 0.4)
             else:
-                # loop_indices = self.make_simple_loop(0.2, 0.3)
-                self.randomize_nodes(3, 0.2, 0.4) # simulate pulling 3 nodes on the rope randomly
-                self.randomize_nodes(3, 0.2, 0.4) # repeat for variation
+                    self.randomize_nodes(3, 0.2, 0.4)
+                    self.randomize_nodes(3, 0.2, 0.4)
             self.reposition_camera()
             self.render_single_scene(M_pix=10)
             print("Total time for scene {}s.".format(str((time.time() - x) % 60)))
@@ -373,5 +383,7 @@ class RopeRenderer:
                 json.dump(self.knots_info, outfile, sort_keys=True, indent=2)
 
 if __name__ == '__main__':
-    renderer = RopeRenderer(rope_radius=0.07, rope_screw_offset=10, bezier_scale=5, bezier_knots=10, save_depth=True, save_rgb=False, save_coords=False)
+    renderer = RopeRenderer(save_depth=True, save_rgb=False)
+    #renderer.run(10, curriculum=True)
     renderer.run(10, curriculum=False)
+    #renderer.run(3600, curriculum=False)
