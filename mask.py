@@ -4,6 +4,7 @@ import os
 import argparse
 
 def mask(image_filename, directory):
+    ''' Produces a mask of a depth image by thresholding '''
 	img_original = cv2.imread('./%s/%s'%(directory, image_filename))
 	img = img_original.copy()
 	img[np.where((img < [5, 5, 5]).all(axis = 2))] = [0, 0, 0]

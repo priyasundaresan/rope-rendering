@@ -66,8 +66,8 @@ def generate_perlin_noise_2d(shape, res=(12, 16)):
 if __name__ == '__main__':
     os.system('rm -rf ./images_noisy')
     os.makedirs('./images_noisy')
-    a, b = 207, 120 # a hack!! this is the range of values on the rope in sim (roughly)
-    c, d = 137, 156 # a hack!! this is the range of values on the rope in real (roughly)
+    a, b = 207, 120 # NOTE: a hack!! this is the range of values on the rope in sim (roughly)
+    c, d = 137, 156 # NOTE: a hack!! this is the range of values on the rope in real (roughly)
     m = interp1d([a,b],[c,d]) 
     if not os.path.exists("./images_noisy"):
         os.makedirs('./images_noisy')
