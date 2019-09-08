@@ -5,16 +5,16 @@ import argparse
 
 def mask(image_filename, directory):
     ''' Produces a mask of a depth image by thresholding '''
-	img_original = cv2.imread('./%s/%s'%(directory, image_filename))
-	img = img_original.copy()
-	img[np.where((img < [5, 5, 5]).all(axis = 2))] = [0, 0, 0]
-	img[np.where((img != [0, 0, 0]).all(axis = 2))] = [1, 1, 1]
-	mask = img
-	visible_mask = img * 255
-	mask_filename = image_filename.replace('rgb', 'mask')
-	visible_mask_filename = image_filename.replace('rgb', 'visible_mask')
-	cv2.imwrite('image_masks/{}'.format(mask_filename), mask)
-	cv2.imwrite('image_masks/{}'.format(visible_mask_filename), visible_mask)
+    img_original = cv2.imread('./%s/%s'%(directory, image_filename))
+    img = img_original.copy()
+    img[np.where((img < [5, 5, 5]).all(axis = 2))] = [0, 0, 0]
+    img[np.where((img != [0, 0, 0]).all(axis = 2))] = [1, 1, 1]
+    mask = img
+    visible_mask = img * 255
+    mask_filename = image_filename.replace('rgb', 'mask')
+    visible_mask_filename = image_filename.replace('rgb', 'visible_mask')
+    cv2.imwrite('image_masks/{}'.format(mask_filename), mask)
+    cv2.imwrite('image_masks/{}'.format(visible_mask_filename), visible_mask)
 
 
 if __name__ == '__main__':

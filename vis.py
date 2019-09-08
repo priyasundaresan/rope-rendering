@@ -33,6 +33,7 @@ if __name__ == '__main__':
     print("parsed")
     with open("images/knots_info.json", "r") as stream:
     	knots_info = json.load(stream)
+    print(len(knots_info['0']))
     print("loaded knots info")
     for i in range(args.num):
 	    show_knots(i, knots_info)

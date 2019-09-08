@@ -79,23 +79,21 @@ if __name__ == '__main__':
             print(f)
             img = cv2.imread('./images/' + f, 0).copy()
             img[np.where((img < [5]))] = [0]            
+            laplacian = cv2.Laplacian(img,cv2.CV_64F)
             mask = cv2.imread('./image_masks/' + f.replace('rgb', 'visible_mask'), 0).copy()
-            #img = cv2.bitwise_not(img, mask=mask) # the depth in real is opposite sim (closer = darker), adjusts for this
             edges = cv2.Canny(img,0,255)
             edges = cv2.dilate(edges,(5, 5),iterations = 2)
             perlin_random = generate_perlin_noise_2d(img.shape)
-            random = np.random.random(img.shape)
-            img[np.where((edges != [0]) & (perlin_random > [0.0]) & (random > [0.4]))] = [0]
-            perlin_random = generate_perlin_noise_2d(img.shape)
-            perlin_random[np.where((img == [0]))] = [0]
-            #img += cv2.normalize(perlin_random, None, -10, 10, cv2.NORM_MINMAX).astype('uint8')
-            for val in range(b, a+1): #TODO: there should be a way to make this run in parallel
-                img[np.where((img == [val]))] = [m(val)]
+            random1 = np.random.random(img.shape)
+            random2 = np.random.random(img.shape)
+            #img[np.where(((laplacian > [6.0]) & (random1 > [0.6])))] = [0]
+            img[np.where(((laplacian > [6.0]) & (random1 > [0.6])) | ((edges != [0]) & (perlin_random > [0.0]) & (random2 > [0.7])))] = [0]
+            indices = np.where((img <= [a]) & (img >= [b]))
+            img[indices] = [m(img[indices])]
             if np.random.uniform() < 0.5:
                 mode = 'gauss'
             else:
                 mode = 'poisson'
             img_noise = noisy(mode, img, mask=mask)
-            #img_noise = img 
             cv2.imwrite('./images_noisy/' + f, img_noise)
             
