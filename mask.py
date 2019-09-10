@@ -7,6 +7,7 @@ def mask(image_filename, directory):
     ''' Produces a mask of a depth image by thresholding '''
     img_original = cv2.imread('./%s/%s'%(directory, image_filename))
     img = img_original.copy()
+    #img[np.where((img > [250, 250, 250]).all(axis = 2))] = [0, 0, 0]
     img[np.where((img < [5, 5, 5]).all(axis = 2))] = [0, 0, 0]
     img[np.where((img != [0, 0, 0]).all(axis = 2))] = [1, 1, 1]
     mask = img

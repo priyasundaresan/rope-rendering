@@ -13,7 +13,6 @@ class RopeRenderer:
     def __init__(self, rope_radius=None, sphere_radius=None, rope_iterations=None, rope_screw_offset=None, bezier_scale=3.7, bezier_knots=12, save_depth=True, save_rgb=False):
         """
         Initializes the Blender rope renderer
-
         :param rope_radius: thickness of rope
         :type rope_radius: float
         :param rope_screw_offset: how tightly wound the "screw" texture is
@@ -39,8 +38,9 @@ class RopeRenderer:
         #self.rope_screw_offset = np.random.uniform(12.5, 14) # how tightly wound the "screw" is
         #self.bezier_scale = 4.5 # length of bezier curve
         self.bezier_scale = bezier_scale # length of bezier curve
-        #self.bezier_scale = 3.2 # was this for sim exp
-        self.bezier_scale = 2.8
+        self.bezier_scale = 3.2
+        #self.bezier_scale = 3.5
+        #self.bezier_scale = 2
         self.bezier_subdivisions = bezier_knots - 2 # the number of splits in the bezier curve (ctrl points - 2)
         self.origin = (0, 0, 0)
         # Make objects
@@ -131,9 +131,8 @@ class RopeRenderer:
         if self.rope_iterations is not None:
             rope_iterations = self.rope_iterations
         else:
-            #rope_iterations = 15.7 # was this for the sim exps
+            rope_iterations = 15.7 # was this for the sim exps
             #rope_iterations = 16.5
-            rope_iterations = 17.7
         self.rope.modifiers["Screw"].iterations = rope_iterations
         bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Screw")
 
@@ -247,8 +246,9 @@ class RopeRenderer:
         # Orient camera towards the rope
         bpy.context.scene.camera = self.camera
         bpy.ops.view3d.camera_to_view_selected()
-        #self.camera.location.z += np.random.uniform(3.3, 3.6) # FOR SIM EXPS
-        self.camera.location.z += np.random.uniform(3.8, 3.9)
+        #self.camera.location.z += np.random.uniform(1, 3)
+        #self.camera.location.z += np.random.uniform(3, 3.5)
+        self.camera.location.z += np.random.uniform(3.3, 3.6)
 
     # NOTE: these three funcs are general utilities, not using rn
 
@@ -259,16 +259,14 @@ class RopeRenderer:
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
         # Get vertices in world space
-        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::45]] # TODO: this is actually where i specify how many vertices to export (play around with :20); will standardize this
+        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::20]] # TODO: this is actually where i specify how many vertices to export (play around with :20); will standardize this
         print("%d Vertices" % len(coords))
         # Convert all vertices to pixel space
         pixels = {}
         scene.render.resolution_percentage = 100
         render_scale = scene.render.resolution_percentage / 100
-        #scene.render.resolution_x = 640
-        #scene.render.resolution_y = 480
-        scene.render.resolution_x = 160
-        scene.render.resolution_y = 120
+        scene.render.resolution_x = 640
+        scene.render.resolution_y = 480
         render_size = (
                 int(scene.render.resolution_x * render_scale),
                 int(scene.render.resolution_y * render_scale),
@@ -369,40 +367,33 @@ class RopeRenderer:
             self.make_bezier()
             if curriculum:
                 rand = np.random.uniform()
-                if rand < 0.33: 
+                #if rand < 0.33: 
+                if rand < 0.25: 
+                    #loop_rand = np.random.uniform(0.22, 0.32)
                     loop_rand = np.random.uniform(0.32, 0.4)
                     loop_indices = self.make_simple_loop(loop_rand, loop_rand)
-                elif rand < 0.66:
+                    #self.randomize_nodes(3, 0.2, 0.3, offlimit_indices=loop_indices)
+                #elif rand < 0.66:
+                elif rand < 0.5:
+                    #loop_indices = self.make_simple_overlap(0.4, 0.5)
                     loop_indices = self.make_simple_overlap(0.4, 0.7)
+#                    self.randomize_nodes(3, 0.2, 0.4)
+                    #self.randomize_nodes(3, 0.2, 0.4)
                     self.randomize_nodes(3, 0.1, 0.3, offlimit_indices=loop_indices)
-                else:
+                elif rand < 0.75:
+                    #loop_indices = self.make_simple_overlap(0.4, 0.5)
                     loop_indices = self.make_simple_overlap(0.4, 0.7)
                     self.randomize_nodes(3, 0.3, 0.4)
-                #if rand < 0.25: 
-                #    loop_rand = np.random.uniform(0.32, 0.4)
-                #    loop_indices = self.make_simple_loop(loop_rand, loop_rand)
-                #elif rand < 0.5:
-                #    loop_indices = self.make_simple_overlap(0.4, 0.7)
-                #    self.randomize_nodes(3, 0.1, 0.3, offlimit_indices=loop_indices)
-                #elif rand < 0.75:
-                #    loop_indices = self.make_simple_overlap(0.4, 0.7)
-                #    self.randomize_nodes(3, 0.3, 0.4)
-                #else:
-                #    self.randomize_nodes(3, 0.4, 0.4)
-                #    self.randomize_nodes(3, 0.4, 0.4)
-            else:
-                rand = np.random.uniform()
-                if rand < 0.2:
-                    self.randomize_nodes(3, 0.2, 0.4)
-                    self.randomize_nodes(3, 0.2, 0.4)
-                    self.randomize_nodes(3, 0.2, 0.4)
-                elif rand < 0.6:
-                    self.randomize_nodes(3, 0.2, 0.4)
-                    self.randomize_nodes(3, 0.2, 0.4)
+                    #self.randomize_nodes(3, 0.1, 0.3, offlimit_indices=loop_indices)
                 else:
-                    self.randomize_nodes(2, 0.2, 0.4)
-                    self.randomize_nodes(2, 0.2, 0.4)
-                    
+                    self.randomize_nodes(3, 0.4, 0.4)
+                    self.randomize_nodes(3, 0.4, 0.4)
+            else:
+                    #self.randomize_nodes(3, 0.4, 0.4)
+                    self.randomize_nodes(3, 0.6, 0.6)
+                    self.randomize_nodes(3, 0.2, 0.2)
+                    self.randomize_nodes(3, 0.2, 0.2)
+                    #self.randomize_nodes(3, 0.4, 0.4)
             self.reposition_camera()
             self.render_single_scene(M_pix=10)
             print("Total time for scene {}s.".format(str((time.time() - x) % 60)))
@@ -412,4 +403,4 @@ class RopeRenderer:
 
 if __name__ == '__main__':
     renderer = RopeRenderer(save_depth=True, save_rgb=False)
-    renderer.run(100, curriculum=False)
+    renderer.run(3600, curriculum=True)
