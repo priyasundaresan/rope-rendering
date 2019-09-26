@@ -1,0 +1,7 @@
+{
+    "bezier_knots": 12,
+    "save_depth": 1,
+    "coord_offset": 200,
+    "num_images": 10,
+    "nonplanar": 1
+}
