@@ -1,5 +1,6 @@
 import bpy, bpy_extras
 import sys
+import copy
 from math import *
 import pprint
 from mathutils import *
@@ -302,10 +303,10 @@ class RopeRenderer:
                     int(scene.render.resolution_y * render_scale),
                     )
             p = (round(camera_coord.x * render_size[0]), round(render_size[1] - camera_coord.y * render_size[1]))
-            valid = True # Valid = True means 'this pixel is unoccluded'
             pixels[i] = [p, camera_coord]
 
-        pixels_unoccluded = {i: [pixels[i][0]] for i in pixels}
+        pixels_raw = {i: [pixels[i][0]] for i in pixels}
+        pixels_unoccluded = copy.deepcopy(pixels_raw)
         # Run kNN on mesh vertex pixels
         neigh = NearestNeighbors(4, M_pix)
         pixels_list = [v[0] for v in pixels.values()]
@@ -334,7 +335,9 @@ class RopeRenderer:
                         pass
         print("Null entries", sum(1 for i in pixels_unoccluded if pixels_unoccluded[i] == []))
 
-        final_pixs = list(pixels_unoccluded.values())
+        
+        final_pixs_raw = list(pixels_raw.values())
+        final_pixs_unoccluded = list(pixels_unoccluded.values())
         filename = "{0:06d}_rgb.png".format(self.i)
         if self.save_rgb:
             scene.world.color = (1, 1, 1)
@@ -367,7 +370,8 @@ class RopeRenderer:
             scene.render.use_multiview = False
             scene.render.filepath = "./images/{}".format(filename)
             bpy.ops.render.render(write_still=True)
-        self.knots_info[self.i] = final_pixs
+        #self.knots_info[self.i] = final_pixs_unoccluded
+        self.knots_info[self.i] = final_pixs_raw
         self.i += 1
 
 
