@@ -1,5 +1,4 @@
 import os
-
 def gen_dir(name, num_vids):
     if os.path.exists("./%s" % name):
         os.system('rm -rf ./%s' % name)

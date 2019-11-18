@@ -440,9 +440,9 @@ class RopeRenderer:
                 self.reposition_camera()
             self.render_single_scene(M_pix=10)
             print("Total time for scene {}s.".format(str((time.time() - x) % 60)))
-        #if self.save_depth or self.save_rgb:
-        #    with open("./images/knots_info.json", 'w') as outfile:
-        #        json.dump(self.knots_info, outfile, sort_keys=True, indent=2)
+        if self.save_depth or self.save_rgb:
+            with open("./images/knots_info.json", 'w') as outfile:
+                json.dump(self.knots_info, outfile, sort_keys=True, indent=2)
 
 if __name__ == '__main__':
     with open("params.json", "r") as f:

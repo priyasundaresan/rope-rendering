@@ -31,7 +31,8 @@ if __name__=='__main__':
         os.system('rm -rf ./partitioned')
         os.makedirs('./partitioned')
     for i in range(len(os.listdir('annotated'))):
-        mask = cv2.imread('image_masks/%06d_visible_mask.png' % i)
+        #mask = cv2.imread('image_masks/%06d_visible_mask.png' % i)
+        mask = cv2.imread('image_masks/%06d_jpg' % i)
         annotated = cv2.imread('annotated/%06d_annotated.png' % i)
         print("Segmenting image_masks/%06d_visible_mask.png" % i)
         segment(mask, annotated, i)
