@@ -7,20 +7,17 @@ import json
 import colorsys
 
 def show_knots(idx, knots_info, save=True):
-    #image_filename = "{0:06d}.png".format(idx)
-    image_filename = "{0:06d}.jpg".format(idx)
+    image_filename = "{0:06d}_rgb.png".format(idx)
+    #image_filename = "{0:06d}.jpg".format(idx)
     print(image_filename)
-    img = cv2.imread('images/{}'.format(image_filename)) * 0
-    #img = cv2.imread('images/{}'.format(image_filename))
+    #img = cv2.imread('images/{}'.format(image_filename)) * 0
+    img = cv2.imread('images/{}'.format(image_filename))
     pixels = knots_info[str(idx)]
     for i in range(len(pixels)):
         for (u, v) in pixels[i]:
-            (r, g, b) = colorsys.hsv_to_rgb(i/len(pixels), 1.0, 1.0)
+            (r, g, b) = colorsys.hsv_to_rgb(float(i)/len(pixels), 1.0, 1.0)
             R, G, B = int(255 * r), int(255 * g), int(255 * b)
             cv2.circle(img,(int(u), int(v)), 1, (R, G, B), -1)
-            #color = np.rint(255*np.random.rand(3)).tolist()
-            #val = 255 * i/len(pixels)
-            #color = (val, 255 - val, 255)
     if save:
     	annotated_filename = "{0:06d}_annotated.png".format(idx)
     	cv2.imwrite('./annotated/{}'.format(annotated_filename), img)
