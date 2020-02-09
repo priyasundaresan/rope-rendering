@@ -68,7 +68,7 @@ if __name__ == '__main__':
     os.makedirs('./images_noisy')
     #a, b = 207, 120 # ORIGINAL
     #c, d = 137, 156 # ORIGINAL
-    a, b = 207, 98 # NOTE: a hack!! this is the range of values on the rope in sim (roughly)
+    a, b = 209, 98 # NOTE: a hack!! this is the range of values on the rope in sim (roughly)
     c, d = 132, 146 # NOTE: a hack!! this is the range of values on the rope in real (roughly)
     m = interp1d([a,b],[c,d]) 
     if not os.path.exists("./images_noisy"):
