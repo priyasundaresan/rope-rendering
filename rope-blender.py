@@ -92,7 +92,8 @@ class RopeRenderer:
         if fixed:
             bpy.ops.object.camera_add(location=[0, 0, 10])
             self.camera = bpy.context.active_object
-            self.camera.rotation_euler = (0, 0, random.uniform(pi/4, 3*pi/4)) # fixed z, rotate only about x/y axis slightly
+            #self.camera.rotation_euler = (0, 0, random.uniform(pi/4, 3*pi/4)) # fixed z, rotate only about x/y axis slightly
+            self.camera.rotation_euler = (0, 0, random.uniform(0, pi/2)) # fixed z, rotate only about x/y axis slightly
             self.camera.name = self.camera_name
         else:
             bpy.ops.object.camera_add(location=[random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)])
@@ -110,7 +111,9 @@ class RopeRenderer:
         if self.rope_radius is not None:
             radius = self.rope_radius
         else:
-            radius = np.random.uniform(0.048, 0.048)
+            #radius = np.random.uniform(0.048, 0.048)
+            #radius = np.random.uniform(0.04, 0.04)
+            radius = np.random.uniform(0.035, 0.037)
         bpy.ops.transform.resize(value=(radius, radius, radius))
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
@@ -136,7 +139,10 @@ class RopeRenderer:
         if self.rope_iterations is not None:
             rope_iterations = self.rope_iterations
         else:
-            rope_iterations = 17.7
+            #rope_iterations = 17.7
+            #rope_iterations = 15.7
+            #rope_iterations = 17.7
+            rope_iterations = 18.8
         self.rope.modifiers["Screw"].iterations = rope_iterations
         bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Screw")
 
@@ -148,7 +154,8 @@ class RopeRenderer:
         if self.sphere_radius is not None:
             sphere_radius = self.sphere_radius
         else:
-            sphere_radius = np.random.uniform(0.35, 0.37)
+            #sphere_radius = np.random.uniform(0.35, 0.37)
+            sphere_radius = np.random.uniform(0.27, 0.27)
         bpy.ops.transform.resize(value=(sphere_radius, sphere_radius, sphere_radius))
         bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
         bpy.ops.object.select_all(action='SELECT')
@@ -188,24 +195,7 @@ class RopeRenderer:
         bpy.ops.mesh.normals_make_consistent(inside=False)
         bpy.ops.object.mode_set(mode='OBJECT')
 
-    def slightly_randomize(self, point, planar=True, max_offset=0.3):
-        # Slightly displaces the position of a point (for randomization in rope configurations)
-        offset_x = np.random.uniform(0, max_offset)
-        offset_y  = np.random.uniform(0, max_offset)
-        offset_z  = np.random.uniform(0, max_offset)
-        if np.random.uniform() < 0.5:
-            offset_x *= -1
-        if np.random.uniform() < 0.5:
-            offset_y *= -1
-        if np.random.uniform() < 0.5:
-            offset_z *= -1
-        point.co.x += offset_x
-        point.co.y += offset_y
-        if not planar:
-            point.co.z += offset_z
-        return offset_x, offset_y, offset_z
-
-    def make_simple_loop(self, offset_min, offset_max):
+    def make_simple_loop(self, offset_min, offset_max, p0=None):
         # Make simple cubic loop (4 control points)  + 2 more control points to pull slack through the loop
         #    2_______1
         #     \  4__/ 
@@ -213,22 +203,46 @@ class RopeRenderer:
         #       \5/__\____________
         #       / \   | 
         #______0   3__|
-        p0 = np.random.choice(range(len(self.bezier_points) - 5))
-        y_shift = random.uniform(offset_min, offset_max)
+        if p0 == None:
+            p0 = np.random.choice(range(len(self.bezier_points) - 5))
+        y_shift = random.uniform(offset_min, 1.2*offset_max)
         x_shift_1 = random.uniform(offset_min/3, offset_max/3)
         x_shift_2 = random.uniform(offset_min/3, offset_max/3)
-        self.bezier_points[p0].co.z -= 0.025 # TODO: sorry, this is a hack for now
+        #self.bezier_points[p0].co.z -= 0.025 # TODO: sorry, this is a hack for now
         self.bezier_points[p0 + 1].co.y += y_shift 
         self.bezier_points[p0 + 1].co.x -= x_shift_1
         self.bezier_points[p0 + 2].co.y += y_shift
         self.bezier_points[p0 + 2].co.x += x_shift_2
-        self.bezier_points[p0 + 1].co.x, self.bezier_points[p0 + 2].co.x = self.bezier_points[p0 + 2].co.x, self.bezier_points[p0 + 1].co.x # Make the X
+        # Make the X
+        self.bezier_points[p0 + 1].co.x, self.bezier_points[p0 + 2].co.x = self.bezier_points[p0 + 2].co.x, self.bezier_points[p0 + 1].co.x
+        
         self.bezier_points[p0 + 4].co.x = (self.bezier_points[p0 + 1].co.x + self.bezier_points[p0 + 2].co.x)/2
         self.bezier_points[p0 + 4].co.y = self.bezier_points[p0 + 1].co.y
-        self.bezier_points[p0 + 1].co.z += 0.025 # TODO: sorry, this is a hack for now
-        self.bezier_points[p0 + 3].co.z += 0.025
-        self.bezier_points[p0 + 5].co = Vector((self.bezier_points[p0 + 1].co.x, (self.bezier_points[p0].co.y + self.bezier_points[p0 + 1    ].co.y)/2, 0.1)) 
-        return set(range(p0, p0 + 5))
+
+        off = np.random.uniform(-0.15,0.15,3)
+        off[2] = 0.0
+        self.bezier_points[p0 + 4].co += Vector(tuple(off))
+
+        #self.bezier_points[p0 + 1].co.z += 0.025 # TODO: sorry, this is a hack for now
+        #self.bezier_points[p0 + 3].co.z += 0.025
+
+        self.bezier_points[p0 + 1].co.z += 0.02 # TODO: sorry, this is a hack for now
+        self.bezier_points[p0 + 3].co.z += 0.02
+
+        #self.bezier_points[p0 + 5].co = Vector((self.bezier_points[p0 + 1].co.x, (self.bezier_points[p0].co.y + self.bezier_points[p0 + 1    ].co.y)/2, 0.1)) 
+        #self.bezier_points[p0 + 5].co = Vector((self.bezier_points[p0 + 1].co.x, (self.bezier_points[p0].co.y + self.bezier_points[p0 + 1    ].co.y)/2, 0.1)) 
+        self.bezier_points[p0 + 5].co = 0.5*self.bezier_points[p0+5].co + 0.5*self.bezier_points[p0+4].co
+        self.bezier_points[p0 + 5].co.z = 0.08
+
+        off = np.random.uniform(-0.3,0.3,3)
+        off[2] = 0.0
+        self.bezier_points[p0 + 5].co += Vector(tuple(off))
+    
+        #if p0 + 6 < len(self.bezier_points):
+        for i in range(p0+6, len(self.bezier_points)):
+            x_off = np.random.uniform(0.3, 1.5)*random.choice((-1,1))
+            y_off = np.random.uniform(0.3, 0.9)*random.choice((-1,1))
+            self.bezier_points[i].co = Vector(tuple((x_off, y_off, 0)))
 
     def make_simple_overlap(self, offset_min, offset_max):
         # Just makes a simple cubic loop
@@ -252,6 +266,10 @@ class RopeRenderer:
         self.bezier_points[p0 + 2].co.z += 0.06
         self.bezier_points[p0 + 1].co.x, self.bezier_points[p0 + 2].co.x = self.bezier_points[p0 + 2].co.x, self.bezier_points[p0 + 1].co.x
         return set(range(p0, p0 + 2)) # this can be passed into offlimit_indices
+
+    def make_tangle(self, offset_min, offset_max):
+        self.randomize_nodes(8, 0.20, 0.20)
+        loop_indices = list(self.make_simple_loop(offset_min, offset_max))
 
     def randomize_nodes(self, num, offset_min, offset_max, nonplanar=False, offlimit_indices=set()):
         knots_idxs = np.random.choice(list(set(range(len(self.bezier_points))) ^ offlimit_indices), min(num, len(self.bezier_points)), replace=False)
@@ -277,8 +295,17 @@ class RopeRenderer:
         # Orient camera towards the rope
         bpy.context.scene.camera = self.camera
         bpy.ops.view3d.camera_to_view_selected()
-        self.camera.location.z += np.random.uniform(3.3, 3.6)
-       # self.camera.location.z += np.random.uniform(2.3, 2.6)
+        #self.camera.location.z += np.random.uniform(3.0, 3.3)
+        #self.camera.location.z += np.random.uniform(3.3, 3.6)
+        self.camera.location.z += np.random.uniform(3.5, 3.8)
+        height = self.camera.location.z
+        angle1 = np.random.uniform(0, pi/64)*random.choice((1,-1))
+        angle2 = np.random.uniform(0, pi/100)*random.choice((1,-1))
+        #angle3 = np.random.uniform(0, pi/12)*random.choice((1,-1))
+        angle3 = np.random.uniform(0, pi/2)*random.choice((1,-1))
+        offset = height*sin(angle1)
+        self.camera.location.z -= offset
+        self.camera.rotation_euler = (angle1, angle2, angle3) 
 
     def render_single_scene(self, M_pix=20, M_depth=0.2):
 		# Produce a single image of the current scene, save_rgb the mesh vertex pixel coords
@@ -356,7 +383,7 @@ class RopeRenderer:
             x = time.time()
             if not self.sequence or (self.sequence and i%self.episode_length == 0):
                 self.clear()
-                self.add_camera()
+                self.add_camera(fixed=True)
                 self.make_rigid_rope()
                 if self.asymmetric:
                     self.add_rope_asymmetry()
@@ -364,18 +391,30 @@ class RopeRenderer:
             if self.nonplanar:
                 # Generate a split of loops, knots, and planar configs
                 rand = np.random.uniform()
-                if rand < 0.45: 
-                    loop_rand = np.random.uniform(0.2, 0.3)
-                    loop_indices = self.make_simple_loop(loop_rand, loop_rand)
-                    #self.randomize_nodes(3, 0.05, 0.1, offlimit_indices=loop_indices)
-                elif rand < 0.7:
-                    loop_rand = np.random.uniform(0.32, 0.4)
-                    loop_indices = self.make_simple_overlap(loop_rand, loop_rand)
-                    self.randomize_nodes(3, 0.05, 0.1, offlimit_indices=loop_indices)
-                else:
-                    self.randomize_nodes(3, 0.6, 0.6)
-                    self.randomize_nodes(3, 0.2, 0.2)
-                    self.randomize_nodes(3, 0.2, 0.2)
+                if rand < 1.0: 
+                    #TANGLE
+                    #loop_rand = np.random.uniform(0.1, 0.35)
+                    #self.make_tangle(loop_rand, loop_rand)
+                    
+                    #LOOP
+                    #loop_rand = np.random.uniform(0.2, 0.4)
+                    loop_rand = np.random.uniform(0.75, 0.95)
+                    #loop_indices = self.make_simple_loop(loop_rand-0.1, loop_rand+0.1, p0=3)
+                    #loop_indices = self.make_simple_loop(loop_rand-0.1, loop_rand+0.1, p0=random.choice((4,5,6)))
+                    loop_indices = self.make_simple_loop(loop_rand-0.1, loop_rand+0.1, p0=random.choice((3,4,5)))
+                    self.randomize_nodes(8, 0.0, 0.15)
+                    #if np.random.uniform() < 0.5:
+                    #    self.randomize_nodes(3, 0.1, 0.3, offlimit_indices=loop_indices)
+                    #else:
+                    #    self.randomize_nodes(3, 0.05, 0.1, offlimit_indices=loop_indices)
+                #elif rand < 0.85:
+                #    loop_rand = np.random.uniform(0.32, 0.4)
+                #    loop_indices = self.make_simple_overlap(loop_rand, loop_rand)
+                #    self.randomize_nodes(3, 0.1, 0.2, offlimit_indices=loop_indices)
+                #else:
+                #    self.randomize_nodes(3, 0.6, 0.6)
+                #    self.randomize_nodes(3, 0.2, 0.2)
+                #    self.randomize_nodes(3, 0.2, 0.2)
             else:
                 # Generate only planar configs
                     if not self.sequence or (self.sequence and i%self.episode_length == 0):

@@ -11,8 +11,9 @@ def pixelNN(idxs, model, inputs, img):
     y = matched_pixels[:,1]
     return img[x, y]
 
-def segment(mask, annotated, i):
-    segmented = mask.copy()
+def segment(mask, color, annotated, i):
+    #segmented = mask.copy()
+    segmented = color.copy()
     colored_idxs = np.where((annotated > [1, 1, 1]))
     annotated_pixels = np.dstack(colored_idxs[:2]).squeeze()
     neigh = NearestNeighbors(1, 5)
@@ -31,8 +32,9 @@ if __name__=='__main__':
         os.system('rm -rf ./partitioned')
         os.makedirs('./partitioned')
     for i in range(len(os.listdir('annotated'))):
-        #mask = cv2.imread('image_masks/%06d_visible_mask.png' % i)
-        mask = cv2.imread('image_masks/%06d_jpg' % i)
+        mask = cv2.imread('image_masks/%06d_visible_mask.png' % i)
         annotated = cv2.imread('annotated/%06d_annotated.png' % i)
+        #color = cv2.imread('images/%06d_rgb.png' % i)
+        color = cv2.imread('images/%06d.jpg' % i)
         print("Segmenting image_masks/%06d_visible_mask.png" % i)
-        segment(mask, annotated, i)
+        segment(mask, color, annotated, i)

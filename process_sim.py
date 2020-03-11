@@ -69,7 +69,9 @@ if __name__ == '__main__':
     #a, b = 207, 120 # ORIGINAL
     #c, d = 137, 156 # ORIGINAL
     a, b = 209, 98 # NOTE: a hack!! this is the range of values on the rope in sim (roughly)
-    c, d = 132, 146 # NOTE: a hack!! this is the range of values on the rope in real (roughly)
+    #c, d = 132, 146 # NOTE: a hack!! this is the range of values on the rope in real (roughly)
+    #c, d = 132, 156 # NOTE: a hack!! this is the range of values on the rope in real (roughly)
+    c, d = 130, 170 # NOTE: a hack!! this is the range of values on the rope in real (roughly)
     m = interp1d([a,b],[c,d]) 
     if not os.path.exists("./images_noisy"):
         os.makedirs('./images_noisy')
@@ -89,8 +91,8 @@ if __name__ == '__main__':
             perlin_random = generate_perlin_noise_2d(img.shape)
             random1 = np.random.random(img.shape)
             random2 = np.random.random(img.shape)
-            img[np.where(((laplacian > [6.0]) & (random1 > [0.7])) | ((edges != [0]) & (perlin_random > [0.0]) & (random2 > [0.7])))] = [0]
-            #img[np.where(((edges != [0]) & (perlin_random > [-0.05]) & (random2 > [0.55])))] = [0]
+            #img[np.where(((laplacian > [6.0]) & (random1 > [0.7])) | ((edges != [0]) & (perlin_random > [0.0]) & (random2 > [0.7])))] = [0]
+            img[np.where(((laplacian > [6.0]) & (random1 > [0.4])))] = [0]
             indices = np.where((img <= [a]) & (img >= [b]))
             img[indices] = [m(img[indices])]
             if np.random.uniform() < 0.5:

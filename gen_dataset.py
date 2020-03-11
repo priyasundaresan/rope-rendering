@@ -1,7 +1,7 @@
 import os
 
-def gen_data(name, coord_offset, num, noise=False):
-    os.system('/Users/priyasundaresan/Downloads/blender-2.80.0-git20190620.d30f72dfd8ac-x86_64/blender.app/Contents/MacOS/blender -b -P rope-blender.py -- --coord_offset=%d --num_images=%d' %(coord_offset, num))
+def gen_data(name, noise=False):
+    os.system('/Users/priyasundaresan/Downloads/blender-2.80.0-git20190620.d30f72dfd8ac-x86_64/blender.app/Contents/MacOS/blender -b -P rope-blender.py')
     os.system('python3 mask.py')
     if noise:
         os.system('python3 process_sim.py')
@@ -17,6 +17,6 @@ if __name__ == '__main__':
     coord_offsets = [25]
     for i in range(len(names)):
         noise=True
-        #gen_data(names[i], coord_offsets[i], 3600, noise=noise)
-        gen_data(names[i]+'_test', coord_offsets[i], 10, noise=noise)
+        gen_data(names[i], noise=noise)
+        gen_data(names[i]+'_test', noise=noise)
     #os.system('rsync -av rope_1418* priya@jensen.ist.berkeley.edu:/raid/priya/data/pdc_synthetic_2/logs_proto/')
