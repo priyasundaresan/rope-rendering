@@ -101,6 +101,75 @@ class RopeRenderer:
             self.camera.rotation_euler = (random.uniform(-pi/4, pi/4), random.uniform(-pi/4, pi/4), random.uniform(-pi, pi))
         bpy.ops.object.light_add(type='SUN', radius=1, location=(0, 0, 0))
 
+    def make_rigid_chord(self):
+        '''
+        Make one long cylinder
+        '''
+        bpy.ops.mesh.primitive_circle_add(location=self.origin)
+        if self.rope_radius is not None:
+            radius = self.rope_radius
+        else:
+            radius = np.random.uniform(0.048, 0.048)
+        bpy.ops.transform.resize(value=(radius, radius, radius))
+        bpy.ops.object.select_all(action='SELECT')
+        bpy.ops.object.join()
+        self.rope = bpy.context.active_object
+
+        self.rope_asymm = self.rope
+
+        self.rope.name = self.rope_name
+        bpy.ops.object.modifier_add(type='SCREW')
+        if self.rope_screw_offset is not None:
+            screw_offset = self.rope_screw_offset
+        else:
+            screw_offset = np.random.uniform(12.5, 13)
+        self.rope.modifiers["Screw"].screw_offset = screw_offset
+        if self.rope_iterations is not None:
+            rope_iterations = self.rope_iterations
+        else:
+            rope_iterations = 17.7
+        self.rope.modifiers["Screw"].iterations = rope_iterations
+        bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Screw")
+
+    def make_rigid_chain(self):
+        '''
+        Join multiple toruses together to make chain shape (http://jayanam.com/chains-with-blender-tutorial/)
+        TODOS: fix torus vertex selection to make oval shape
+               fix ARRAY selection after making empty mesh
+        '''
+        # hacky fix from https://www.reddit.com/r/blenderhelp/comments/dnb56f/rendering_python_script_in_background/
+        for window in bpy.context.window_manager.windows:
+            screen = window.screen
+
+            for area in screen.areas:
+                if area.type == 'VIEW_3D':
+                    override = {'window': window, 'screen': screen, 'area': area}
+                    bpy.ops.screen.screen_full_area(override)
+                    break
+        bpy.ops.mesh.primitive_torus_add(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), major_radius=1, minor_radius=0.25, abso_major_rad=1.25, abso_minor_rad=0.75)
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.transform.translate(value=(0, -1, 0), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+        bpy.ops.transform.translate(value=(0, -1, 0), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+        bpy.ops.object.editmode_toggle()
+        self.rope = bpy.context.active_object
+        self.rope_asymm = self.rope
+        self.rope.name = self.rope_name
+
+        bpy.ops.object.empty_add(type='PLAIN_AXES', location=(0, 1.8, 0))
+        bpy.ops.transform.rotate(value=1.5708, orient_axis='Y', orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+        bpy.context.active_object.select_set(False)
+
+        self.rope_asymm.select_set(True)
+        bpy.ops.object.modifier_add(type='ARRAY')
+        bpy.context.object.modifiers["Array"].use_relative_offset = False
+        bpy.context.object.modifiers["Array"].use_object_offset = True
+        bpy.context.object.modifiers["Array"].offset_object = bpy.data.objects["Empty"]
+
+        # bpy.ops.object.modifier_add(type='CURVE')
+        # bpy.context.object.modifiers["Curve"].object = bpy.data.objects["NurbsPath"] # FIX This
+        # bpy.context.object.modifiers["Curve"].deform_axis = 'POS_Y'
+        # bpy.context.object.modifiers["Array"].count = 20
+
 
     def make_rigid_rope(self):
         '''
@@ -116,14 +185,17 @@ class RopeRenderer:
         bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
         bpy.ops.transform.translate(value=(radius, 0, 0))
         bpy.ops.object.mode_set(mode='OBJECT')
-        for i in range(1, 4):
+        # for i in range(1, 4):
+        num_chords = np.random.randint(3, 5)
+        for i in range(1, num_chords):
             bpy.ops.object.duplicate_move(OBJECT_OT_duplicate=None, TRANSFORM_OT_translate=None)
             ob = bpy.context.active_object
+            # ob.rotation_euler = (0, 0, i * (2*pi / num_chords))
             ob.rotation_euler = (0, 0, i * (pi / 2))
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.join()
         self.rope = bpy.context.active_object
-        
+
         self.rope_asymm = self.rope
 
         self.rope.name = self.rope_name
@@ -131,12 +203,14 @@ class RopeRenderer:
         if self.rope_screw_offset is not None:
             screw_offset = self.rope_screw_offset
         else:
-            screw_offset = np.random.uniform(12.5, 13)
-        self.rope.modifiers["Screw"].screw_offset = screw_offset 
+            # screw_offset = np.random.uniform(12.5, 13)
+            screw_offset = np.random.uniform(5, 13)
+        self.rope.modifiers["Screw"].screw_offset = screw_offset
         if self.rope_iterations is not None:
             rope_iterations = self.rope_iterations
         else:
-            rope_iterations = 17.7
+            # rope_iterations = 17.7
+            rope_iterations = 17.7 * 13/screw_offset
         self.rope.modifiers["Screw"].iterations = rope_iterations
         bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Screw")
 
@@ -155,7 +229,7 @@ class RopeRenderer:
         bpy.ops.object.join()
         self.rope_asymm = bpy.context.active_object
         self.rope_asymm.name= self.rope_asymm_name
-        
+
     def make_bezier(self):
         '''
         Create bezier curve
@@ -208,17 +282,17 @@ class RopeRenderer:
     def make_simple_loop(self, offset_min, offset_max):
         # Make simple cubic loop (4 control points)  + 2 more control points to pull slack through the loop
         #    2_______1
-        #     \  4__/ 
+        #     \  4__/
         #      \ | /\
         #       \5/__\____________
-        #       / \   | 
+        #       / \   |
         #______0   3__|
         p0 = np.random.choice(range(len(self.bezier_points) - 5))
         y_shift = random.uniform(offset_min, offset_max)
         x_shift_1 = random.uniform(offset_min/3, offset_max/3)
         x_shift_2 = random.uniform(offset_min/3, offset_max/3)
         self.bezier_points[p0].co.z -= 0.025 # TODO: sorry, this is a hack for now
-        self.bezier_points[p0 + 1].co.y += y_shift 
+        self.bezier_points[p0 + 1].co.y += y_shift
         self.bezier_points[p0 + 1].co.x -= x_shift_1
         self.bezier_points[p0 + 2].co.y += y_shift
         self.bezier_points[p0 + 2].co.x += x_shift_2
@@ -227,18 +301,18 @@ class RopeRenderer:
         self.bezier_points[p0 + 4].co.y = self.bezier_points[p0 + 1].co.y
         self.bezier_points[p0 + 1].co.z += 0.025 # TODO: sorry, this is a hack for now
         self.bezier_points[p0 + 3].co.z += 0.025
-        self.bezier_points[p0 + 5].co = Vector((self.bezier_points[p0 + 1].co.x, (self.bezier_points[p0].co.y + self.bezier_points[p0 + 1    ].co.y)/2, 0.1)) 
+        self.bezier_points[p0 + 5].co = Vector((self.bezier_points[p0 + 1].co.x, (self.bezier_points[p0].co.y + self.bezier_points[p0 + 1    ].co.y)/2, 0.1))
         return set(range(p0, p0 + 5))
 
     def make_simple_overlap(self, offset_min, offset_max):
         # Just makes a simple cubic loop
         # Geometrically arrange the bezier points into a loop, and slightly randomize over node positions for variety
         #    2_______1
-        #     \     / 
+        #     \     /
         #      \   /
         #       \ /
-        #       / \    
-        #______0   3_____ 
+        #       / \
+        #______0   3_____
         p0 = np.random.choice(range(len(self.bezier_points) - 5))
         y_shift = random.uniform(offset_min, offset_max)
         x_shift_1 = random.uniform(offset_min/3, offset_max/3)
@@ -285,7 +359,7 @@ class RopeRenderer:
         scene = bpy.context.scene
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
-        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::len(list(rope_deformed.data.vertices))//self.num_annotations]] 
+        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::len(list(rope_deformed.data.vertices))//self.num_annotations]]
         print("%d Vertices" % len(coords))
         pixels = {}
         scene.render.resolution_percentage = 100
@@ -357,14 +431,19 @@ class RopeRenderer:
             if not self.sequence or (self.sequence and i%self.episode_length == 0):
                 self.clear()
                 self.add_camera()
-                self.make_rigid_rope()
+                rope_texture = np.random.randint(1, 3)
+                if rope_texture == 1:
+                    self.make_rigid_rope()
+                else:
+                    self.make_rigid_chord()
+                # self.make_rigid_chain()
                 if self.asymmetric:
                     self.add_rope_asymmetry()
                 self.make_bezier()
             if self.nonplanar:
                 # Generate a split of loops, knots, and planar configs
                 rand = np.random.uniform()
-                if rand < 0.45: 
+                if rand < 0.45:
                     loop_rand = np.random.uniform(0.2, 0.3)
                     loop_indices = self.make_simple_loop(loop_rand, loop_rand)
                     #self.randomize_nodes(3, 0.05, 0.1, offlimit_indices=loop_indices)
@@ -394,7 +473,7 @@ class RopeRenderer:
 if __name__ == '__main__':
     with open("params.json", "r") as f:
         rope_params = json.load(f)
-    renderer = RopeRenderer(save_depth=rope_params["save_depth"], 
+    renderer = RopeRenderer(save_depth=rope_params["save_depth"],
                             asymmetric=rope_params["asymmetric"],
                             save_rgb=(not rope_params["save_depth"]),
                             num_images = rope_params["num_images"],
