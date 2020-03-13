@@ -160,7 +160,7 @@ class RopeRenderer:
         for i, p in enumerate(self.bezier_points):
             p.co = self.straight_bezier_coords[i]
 
-    def make_simple_loop(self, offset_min, offset_max, p0=None):
+    def make_simple_loop(self, x_offset_min, x_offset_max, y_offset_min, y_offset_max, p0=None):
         # Make simple cubic loop (4 control points)  + 2 more control points to pull slack through the loop
         #    2_______1
         #     \  4__/ 
@@ -170,19 +170,20 @@ class RopeRenderer:
         #______0   3__|
         if p0 == None:
             p0 = np.random.choice(range(len(self.bezier_points) - 5))
-        y_shift = random.uniform(offset_min, 1.2*offset_max)
-        x_shift_1 = random.uniform(offset_min/3, offset_max/3)
-        x_shift_2 = random.uniform(offset_min/3, offset_max/3)
-        self.bezier_points[p0 + 1].co.y += y_shift 
+        x_shift_1 = random.uniform(x_offset_min, x_offset_max)
+        y_shift_1 = random.uniform(y_offset_min, y_offset_max)
+        x_shift_2 = random.uniform(x_offset_min, x_offset_max)
+        y_shift_2 = random.uniform(y_offset_min, y_offset_max)
+        self.bezier_points[p0 + 1].co.y += y_shift_1
         self.bezier_points[p0 + 1].co.x -= x_shift_1
-        self.bezier_points[p0 + 2].co.y += y_shift
+        self.bezier_points[p0 + 2].co.y += y_shift_2
         self.bezier_points[p0 + 2].co.x += x_shift_2
         # Make the X by swapping 1, 2
         self.bezier_points[p0 + 1].co.x, self.bezier_points[p0 + 2].co.x = self.bezier_points[p0 + 2].co.x, self.bezier_points[p0 + 1].co.x
-        
         # Center the 4th point in the middle of 1, 2, randomize it slightly
         self.bezier_points[p0 + 4].co.x = (self.bezier_points[p0 + 1].co.x + self.bezier_points[p0 + 2].co.x)/2
-        self.bezier_points[p0 + 4].co.y = self.bezier_points[p0 + 1].co.y
+        #self.bezier_points[p0 + 4].co.y = self.bezier_points[p0 + 1].co.y
+        self.bezier_points[p0 + 4].co.y = 0.7*self.bezier_points[p0 + 1].co.y + 0.3*self.bezier_points[p0 + 3].co.y
         off = np.random.uniform(-0.15,0.15,3)
         off[2] = 0.0
         self.bezier_points[p0 + 4].co += Vector(tuple(off))
@@ -193,10 +194,12 @@ class RopeRenderer:
 
         # 5th point should be near the 4th point and raised up, randomized slightly
         self.bezier_points[p0 + 5].co = 0.5*self.bezier_points[p0+5].co + 0.5*self.bezier_points[p0+4].co
+        #self.bezier_points[p0 + 5].co = self.bezier_points[p0+4].co 
         self.bezier_points[p0 + 5].co.z = 0.08
         off = np.random.uniform(-0.3,0.3,3)
         off[2] = 0.0
         self.bezier_points[p0 + 5].co += Vector(tuple(off))
+        return set(range(p0, p0 + 5)) # this can be passed into offlimit_indices
 
     def make_simple_overlap(self, offset_min, offset_max):
         # Just makes a simple cubic loop
@@ -225,12 +228,13 @@ class RopeRenderer:
         self.randomize_nodes(8, 0.20, 0.20)
         loop_indices = list(self.make_simple_loop(offset_min, offset_max))
 
-    def randomize_nodes(self, num, offset_min, offset_max, nonplanar=False, offlimit_indices=set()):
-        knots_idxs = np.random.choice(list(set(range(len(self.bezier_points))) ^ offlimit_indices), min(num, len(self.bezier_points)), replace=False)
+    def randomize_nodes(self, num, x_offset_min, x_offset_max, y_offset_min, y_offset_max, nonplanar=False, offlimit_indices=set()):
+        choices = list(set(range(len(self.bezier_points))) ^ offlimit_indices)
+        knots_idxs = np.random.choice(choices, min(num, len(choices)), replace=False)
         for idx in knots_idxs:
             knot = self.bezier_points[idx]
-            offset_y = random.uniform(offset_min, offset_max)
-            offset_x = random.uniform(offset_min/2, offset_max/2)
+            offset_x = random.uniform(x_offset_min, x_offset_max)
+            offset_y = random.uniform(y_offset_min, y_offset_max)
             if random.uniform(0, 1) < 0.5:
                 offset_y *= -1
             if random.uniform(0, 1) < 0.5:
@@ -251,10 +255,10 @@ class RopeRenderer:
         height = self.camera.location.z
         angle1 = np.random.uniform(0, pi/12)*random.choice((1,-1))
         angle2 = np.random.uniform(0, pi/12)*random.choice((1,-1))
-        angle3 = np.random.uniform(0, pi/2)*random.choice((1,-1))
+        angle3 = np.random.uniform(0, pi/4)*random.choice((1,-1))
         self.camera.rotation_euler = (angle1, angle2, angle3) 
         bpy.ops.view3d.camera_to_view_selected()
-        self.camera.location.z += np.random.uniform(3.5, 3.8)
+        self.camera.location.z += np.random.uniform(2, 2.5)
         #offset = height*sin(angle1)
         #self.camera.location.z -= offset
 
@@ -331,7 +335,8 @@ class RopeRenderer:
         annot = {}
         for episode in range(self.num_images):
             self.straighten_rope()
-            self.randomize_nodes(3, 0.2, 0.2)
+            loop_indices = self.make_simple_loop(0.05, 0.075, 0.15, 0.5, p0=random.choice((3,4,5)))
+            self.randomize_nodes(4, 0.05, 0.1, 0.05, 0.01, offlimit_indices = loop_indices)
             self.reposition_camera()
             annot = self.render(render_path, episode, self.rope_asymm, annotations=annot, num_annotations=self.num_annotations) # Render, save ground truth
         with open("./images/knots_info.json", 'w') as outfile:
