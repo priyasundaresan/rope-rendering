@@ -359,7 +359,11 @@ class RopeRenderer:
         scene = bpy.context.scene
         depsgraph = bpy.context.evaluated_depsgraph_get()
         rope_deformed = self.rope_asymm.evaluated_get(depsgraph)
-        coords = [rope_deformed.matrix_world @ v.co for v in list(rope_deformed.data.vertices)[::len(list(rope_deformed.data.vertices))//self.num_annotations]]
+        verts = list(rope_deformed.data.vertices)
+        idxs = np.round(np.linspace(0, len(verts) - 1, self.num_annotations)).astype(int)
+        verts_sparsified = [verts[i] for i in idxs]
+        #coords = [rope_deformed.matrix_world @ v.co for v in verts[::len(verts)//self.num_annotations]]
+        coords = [rope_deformed.matrix_world @ v.co for v in verts_sparsified]
         print("%d Vertices" % len(coords))
         pixels = {}
         scene.render.resolution_percentage = 100
