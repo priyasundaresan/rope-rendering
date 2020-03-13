@@ -5,7 +5,7 @@
     "num_annotations": 700,
     "num_images": 20,
     "nonplanar": 1,
-    "bezier_scale": 3, 
+    "bezier_scale": 1.95, 
     "sequence": 0,
     "episode_length": 100,
     "render_width": 640,
