@@ -3,7 +3,7 @@
     "asymmetric": 1,
     "save_depth": 0,
     "num_annotations": 100,
-    "num_images": 5,
+    "num_images": 10,
     "nonplanar": 1,
     "bezier_scale": 3.7, 
     "sequence": 0,
