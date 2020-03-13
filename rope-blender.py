@@ -106,28 +106,17 @@ class RopeRenderer:
         Make one long cylinder
         '''
         bpy.ops.mesh.primitive_circle_add(location=self.origin)
-        if self.rope_radius is not None:
-            radius = self.rope_radius
-        else:
-            radius = np.random.uniform(0.048, 0.048)
+        radius = np.random.uniform(0.05, 0.1)
         bpy.ops.transform.resize(value=(radius, radius, radius))
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.join()
         self.rope = bpy.context.active_object
-
         self.rope_asymm = self.rope
-
         self.rope.name = self.rope_name
         bpy.ops.object.modifier_add(type='SCREW')
-        if self.rope_screw_offset is not None:
-            screw_offset = self.rope_screw_offset
-        else:
-            screw_offset = np.random.uniform(12.5, 13)
+        screw_offset = np.random.uniform(12.5, 13)
         self.rope.modifiers["Screw"].screw_offset = screw_offset
-        if self.rope_iterations is not None:
-            rope_iterations = self.rope_iterations
-        else:
-            rope_iterations = 17.7
+        rope_iterations = np.random.uniform(9, 10)
         self.rope.modifiers["Screw"].iterations = rope_iterations
         bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Screw")
 
