@@ -49,7 +49,59 @@ class RopeRenderer:
         # Dictionary to store pixel vals of knots (vertices)
         self.knots_info = {}
         self.i = 0
-        self.fo = None
+
+    def pattern(self, obj, texture_filename):
+        '''Add image texture to object'''
+        if '%sTexture' % obj.name in bpy.data.materials:
+            mat = bpy.data.materials['%sTexture'%obj.name]
+        else:
+            mat = bpy.data.materials.new(name="%sTexture"%obj.name)
+            mat.use_nodes = True
+        texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
+        bsdf = mat.node_tree.nodes["Principled BSDF"]
+        texImage.image = bpy.data.images.load(texture_filename)
+        mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
+        mat.specular_intensity = np.random.uniform(0, 0.3)
+        mat.roughness = np.random.uniform(0.5, 1)
+        if not obj.data.materials:
+            obj.data.materials.append(mat)
+        else:
+            obj.data.materials[0] = mat
+
+    def set_viewport_shading(self, mode):
+        '''Makes color/texture viewable in viewport'''
+        areas = bpy.context.workspace.screens[0].areas
+        for area in areas:
+            for space in area.spaces:
+                if space.type == 'VIEW_3D':
+                    space.shading.type = mode
+
+    def texture_randomize(self, obj, textures_folder):
+        rand_img_path = random.choice(os.listdir(textures_folder))
+        img_filepath = os.path.join(textures_folder, rand_img_path)
+        pattern(obj, img_filepath)
+    
+    def colorize(self, obj, color):
+        '''Add color to object'''
+        if '%sColor' % obj.name in bpy.data.materials:
+            mat = bpy.data.materials['%sColor'%obj.name]
+        else:
+            mat = bpy.data.materials.new(name="%sColor"%obj.name)
+            mat.use_nodes = False
+        mat.diffuse_color = color
+        mat.specular_intensity = np.random.uniform(0, 0.1)
+        mat.roughness = np.random.uniform(0.5, 1)
+        if not obj.data.materials:
+            obj.data.materials.append(mat)
+        else:
+            obj.data.materials[0] = mat
+
+    def make_table(self):
+        # Generate table surface
+        bpy.ops.mesh.primitive_plane_add(size=15, location=(0,0,-0.1))
+        #bpy.ops.transform.resize(value=(0.33, 0.33, 1))
+        #bpy.ops.object.modifier_add(type='COLLISION')
+        return bpy.context.object
 
     def clear(self):
         """
@@ -242,7 +294,7 @@ class RopeRenderer:
         # Put 4th point's y coordinate right below 1st point's y coordinate
         self.bezier_points[p0 + 4].co.y = self.bezier_points[p0 + 1].co.y + np.random.uniform(-0.05, -0.1)
         # Randomize 4th point slightly
-        off = np.random.uniform(-0.05,0.05,3)
+        off = np.random.uniform(-0.03,0.03,3)
         off[2] = 0.0
         self.bezier_points[p0 + 4].co += Vector(tuple(off))
 
@@ -307,7 +359,9 @@ class RopeRenderer:
     def reposition_camera(self):
         # Orient camera towards the rope
         bpy.context.scene.camera = self.camera
-        self.camera.rotation_euler = (random.uniform(-pi/12, pi/12), random.uniform(-pi/12, pi/12), random.uniform(-pi/4, pi/4)) # fixed z, rotate only about x/y axis slightly
+        #self.camera.rotation_euler = (random.uniform(-pi/12, pi/12), random.uniform(-pi/12, pi/12), random.uniform(-pi/4, pi/4)) # fixed z, rotate only about x/y axis slightly
+        self.camera.rotation_euler = (random.uniform(0, 0), random.uniform(0, 0), random.uniform(-pi/4, pi/4)) # fixed z, rotate only about x/y axis slightly
+        #self.camera.rotation_euler = (random.uniform(-pi/24, pi/24), random.uniform(-pi/24, pi/24), random.uniform(-pi/4, pi/4)) # fixed z, rotate only about x/y axis slightly
         bpy.ops.view3d.camera_to_view_selected()
         self.camera.location.z += np.random.uniform(3.3, 3.6)
 
@@ -319,6 +373,7 @@ class RopeRenderer:
         return obj_deformed
 
     def set_render_settings(self, engine, folder, filename, render_width=640, render_height=480):
+        self.set_viewport_shading('MATERIAL')
         scene = bpy.context.scene
         scene.render.resolution_percentage = 100
         render_scale = scene.render.resolution_percentage / 100
@@ -336,6 +391,7 @@ class RopeRenderer:
         elif engine == "BLENDER_EEVEE":
             scene.eevee.taa_samples = 1
             scene.eevee.taa_render_samples = 1
+            scene.view_settings.view_transform = 'Raw'
         scene.render.resolution_percentage = 100
         render_scale = scene.render.resolution_percentage / 100
         scene.render.resolution_x = render_width
@@ -359,13 +415,53 @@ class RopeRenderer:
         mapping[frame] = pixels
         return mapping
 
-    def render(self, filename, index, obj, annotations=None, num_annotations=0):
+    def render(self, filename, index, obj, annotations=None, num_annotations=0, export_mask=True):
         scene = bpy.context.scene
+        if export_mask:
+            self.render_mask("image_masks/%06d_visible_mask.png", "images_depth/%06d_rgb.png", index)
         scene.render.filepath = filename % index
         bpy.ops.render.render(write_still=True)
         if annotations is not None:
             annotations = self.annotate(index, annotations, num_annotations)
         return annotations
+
+    def render_mask(self, mask_filename, depth_filename, index):
+        # NOTE: this method is still in progress
+        scene = bpy.context.scene
+        saved = scene.render.engine
+        scene.render.engine = 'BLENDER_EEVEE'
+        scene.eevee.taa_samples = 1
+        scene.eevee.taa_render_samples = 1
+        scene.use_nodes = True
+        tree = bpy.context.scene.node_tree
+        links = tree.links
+        render_node = tree.nodes["Render Layers"]
+        norm_node = tree.nodes.new(type="CompositorNodeNormalize")
+        inv_node = tree.nodes.new(type="CompositorNodeInvert")
+        math_node = tree.nodes.new(type="CompositorNodeMath")
+        math_node.operation = 'CEIL' # Threshold the depth image
+        composite = tree.nodes.new(type = "CompositorNodeComposite")
+
+        links.new(render_node.outputs["Depth"], inv_node.inputs["Color"])
+        links.new(inv_node.outputs[0], norm_node.inputs[0])
+        links.new(norm_node.outputs[0], composite.inputs["Image"])
+
+        scene.render.filepath = depth_filename % index
+        bpy.ops.render.render(write_still=True)
+
+        links.new(norm_node.outputs[0], math_node.inputs[0])
+        links.new(math_node.outputs[0], composite.inputs["Image"])
+
+        saved_filepath = scene.render.filepath
+        scene.render.filepath = mask_filename % index
+        bpy.ops.render.render(write_still=True)
+        # Clean up 
+        scene.render.engine = saved
+        scene.render.filepath = saved_filepath
+        for node in tree.nodes:
+            if node.name != "Render Layers":
+                tree.nodes.remove(node)
+        scene.use_nodes = False
 
     def render_dataset(self):
         if not os.path.exists("./images"):
@@ -373,13 +469,7 @@ class RopeRenderer:
         else:
             os.system('rm -r ./images')
             os.makedirs('./images')
-        self.clear()
-        self.add_camera()
-        self.make_rigid_rope()
-        if self.asymmetric:
-            self.add_rope_asymmetry()
-        self.make_bezier()
-        if not self.save_rgb:
+        if self.domain_randomize:
             engine = 'BLENDER_EEVEE'
         elif self.save_rgb:
             engine = 'BLENDER_WORKBENCH'
@@ -405,7 +495,7 @@ class RopeRenderer:
                     loop_indices = self.make_simple_loop(0.1, 0.15, 0.2, 0.35, p0=random.choice((3,4,5)))
                     self.randomize_nodes(4, 0.05, 0.1, 0.05, 0.01, offlimit_indices = loop_indices)
                 elif rand < 0.66:
-                    loop_indices = self.make_simple_loop(0.05, 0.075, 0.15, 0.5, p0=random.choice((3,4,5)))
+                    loop_indices = self.make_simple_loop(0.025, 0.075, 0.05, 0.2, p0=random.choice((3,4,5)))
                     self.randomize_nodes(4, 0.05, 0.1, 0.05, 0.01, offlimit_indices = loop_indices)
                 else:
                     self.randomize_nodes(4, 0.1, 0.3, 0.1, 0.3)
@@ -417,6 +507,7 @@ class RopeRenderer:
                         self.randomize_nodes(1, 0.03, 0.05, 0.03, 0.05)
             if not self.sequence or (self.sequence and i%self.episode_length == 0):
                 self.reposition_camera()
+            self.make_table()
             annot = self.render(render_path, i, self.rope_asymm, annotations=annot, num_annotations=self.num_annotations) # Render, save ground truth
         with open("./images/knots_info.json", 'w') as outfile:
             json.dump(annot, outfile, sort_keys=True, indent=2)
