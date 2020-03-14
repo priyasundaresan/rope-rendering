@@ -79,7 +79,7 @@ class RopeRenderer:
     def texture_randomize(self, obj, textures_folder):
         rand_img_path = random.choice(os.listdir(textures_folder))
         img_filepath = os.path.join(textures_folder, rand_img_path)
-        pattern(obj, img_filepath)
+        self.pattern(obj, img_filepath)
     
     def colorize(self, obj, color):
         '''Add color to object'''
@@ -101,7 +101,7 @@ class RopeRenderer:
         bpy.ops.mesh.primitive_plane_add(size=15, location=(0,0,-0.1))
         #bpy.ops.transform.resize(value=(0.33, 0.33, 1))
         #bpy.ops.object.modifier_add(type='COLLISION')
-        return bpy.context.object
+        self.table = bpy.context.object
 
     def clear(self):
         """
@@ -132,6 +132,26 @@ class RopeRenderer:
         self.camera.rotation_euler = (0, 0, random.uniform(pi/4, 3*pi/4)) # fixed z, rotate only about x/y axis slightly
         self.camera.name = self.camera_name
         bpy.ops.object.light_add(type='SUN', radius=1, location=(0, 0, 0))
+
+    def add_light(self):
+        light_data = bpy.data.lights.new(name="Light", type='POINT')
+        #light_data.energy = 300
+        light_object = bpy.data.objects.new(name="LightObj", object_data=light_data)
+        bpy.context.collection.objects.link(light_object)
+        bpy.context.view_layer.objects.active = light_object
+        light_object.location = (0, 0, 5)
+        scene = bpy.context.scene
+        #scene.view_settings.exposure = 1.5 
+
+    def randomize_light(self):
+        scene = bpy.context.scene
+        scene.view_settings.exposure = random.uniform(0.5, 1.5)
+        light_data = bpy.data.lights['Light']
+        light_data.color = tuple(np.random.uniform(0,1,3))
+        light_data.energy = np.random.uniform(20,200)
+        light_data.shadow_color = tuple(np.random.uniform(0,1,3))
+        light_obj = bpy.data.objects['LightObj']
+        light_obj.data.color = tuple(np.random.uniform(0.7,1,3))
 
     def make_rigid_chord(self):
         '''
@@ -230,6 +250,11 @@ class RopeRenderer:
             sphere_radius = self.sphere_radius
         else:
             sphere_radius = np.random.uniform(0.35, 0.37)
+        if self.domain_randomize:
+            yellow = np.array([0.75, 0.9, 0.1])
+            offset = np.random.uniform(-0.1, 0.1, 3)
+            color = tuple(np.hstack((yellow+offset, np.array([1]))))
+            self.colorize(bpy.context.object, color)
         bpy.ops.transform.resize(value=(sphere_radius, sphere_radius, sphere_radius))
         bpy.ops.transform.rotate(value= pi / 2, orient_axis='X')
         bpy.ops.object.select_all(action='SELECT')
@@ -363,7 +388,8 @@ class RopeRenderer:
         self.camera.rotation_euler = (random.uniform(0, 0), random.uniform(0, 0), random.uniform(-pi/4, pi/4)) # fixed z, rotate only about x/y axis slightly
         #self.camera.rotation_euler = (random.uniform(-pi/24, pi/24), random.uniform(-pi/24, pi/24), random.uniform(-pi/4, pi/4)) # fixed z, rotate only about x/y axis slightly
         bpy.ops.view3d.camera_to_view_selected()
-        self.camera.location.z += np.random.uniform(3.3, 3.6)
+        #self.camera.location.z += np.random.uniform(3.3, 3.6)
+        self.camera.location.z += np.random.uniform(2.5, 3)
 
     def update(self, obj):
         # Call this method whenever you want the updated coordinates of an object after it has been deformed
@@ -480,11 +506,14 @@ class RopeRenderer:
             if not self.sequence or (self.sequence and i%self.episode_length == 0):
                 self.clear()
                 self.add_camera()
+                self.add_light()
                 rope_texture = np.random.randint(1, 3)
                 if rope_texture == 1:
                     self.make_rigid_rope()
                 else:
                     self.make_rigid_chord()
+                color = tuple(np.concatenate((np.random.uniform(0.8, 1, 3), np.array([1]))))
+                self.colorize(self.rope_asymm, color)
                 if self.asymmetric:
                     self.add_rope_asymmetry()
                 self.make_bezier()
@@ -508,6 +537,14 @@ class RopeRenderer:
             if not self.sequence or (self.sequence and i%self.episode_length == 0):
                 self.reposition_camera()
             self.make_table()
+            if self.domain_randomize:
+                self.randomize_light()
+                if random.random() < 0.5:
+                    self.texture_randomize(self.table, 'val2017')
+                else:
+                    color = tuple(np.concatenate((np.random.uniform(0.5, 1, 3), np.array([1]))))
+                    self.colorize(self.table, color)
+                
             annot = self.render(render_path, i, self.rope_asymm, annotations=annot, num_annotations=self.num_annotations) # Render, save ground truth
         with open("./images/knots_info.json", 'w') as outfile:
             json.dump(annot, outfile, sort_keys=True, indent=2)
