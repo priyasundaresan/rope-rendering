@@ -8,9 +8,7 @@ import colorsys
 
 def show_knots(idx, knots_info, save=True):
     image_filename = "{0:06d}_rgb.png".format(idx)
-    #image_filename = "{0:06d}.jpg".format(idx)
     print(image_filename)
-    #img = cv2.imread('images/{}'.format(image_filename)) * 0
     img = cv2.imread('images/{}'.format(image_filename))
     pixels = knots_info[str(idx)]
     for i in range(len(pixels)):
@@ -35,7 +33,6 @@ if __name__ == '__main__':
     print("parsed")
     with open("images/knots_info.json", "r") as stream:
     	knots_info = json.load(stream)
-    print(len(knots_info['0']))
     print("loaded knots info")
     for i in range(args.num):
         show_knots(i, knots_info)
