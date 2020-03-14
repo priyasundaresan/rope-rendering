@@ -512,8 +512,10 @@ class RopeRenderer:
                     self.make_rigid_rope()
                 else:
                     self.make_rigid_chord()
-                color = tuple(np.concatenate((np.random.uniform(0.8, 1, 3), np.array([1]))))
-                self.colorize(self.rope_asymm, color)
+                if self.domain_randomize:
+                    color = tuple(np.concatenate((np.random.uniform(0.8, 1, 3), np.array([1]))))
+                    self.colorize(self.rope_asymm, color)
+                    #self.texture_randomize(self.rope_asymm, 'rope_textures') # UNCOMMENT for randomizing rope textures
                 if self.asymmetric:
                     self.add_rope_asymmetry()
                 self.make_bezier()
