@@ -48,6 +48,7 @@ class RopeRenderer:
         self.camera_name = "Camera"
         # Dictionary to store pixel vals of knots (vertices)
         self.knots_info = {}
+        self.chain = False
         self.i = 0
 
     def pattern(self, obj, texture_filename):
@@ -80,7 +81,7 @@ class RopeRenderer:
         rand_img_path = random.choice(os.listdir(textures_folder))
         img_filepath = os.path.join(textures_folder, rand_img_path)
         self.pattern(obj, img_filepath)
-    
+
     def colorize(self, obj, color):
         '''Add color to object'''
         if '%sColor' % obj.name in bpy.data.materials:
@@ -141,7 +142,7 @@ class RopeRenderer:
         bpy.context.view_layer.objects.active = light_object
         light_object.location = (0, 0, 5)
         scene = bpy.context.scene
-        #scene.view_settings.exposure = 1.5 
+        #scene.view_settings.exposure = 1.5
 
     def randomize_light(self):
         scene = bpy.context.scene
@@ -186,29 +187,43 @@ class RopeRenderer:
                     override = {'window': window, 'screen': screen, 'area': area}
                     bpy.ops.screen.screen_full_area(override)
                     break
-        bpy.ops.mesh.primitive_torus_add(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), major_radius=1, minor_radius=0.25, abso_major_rad=1.25, abso_minor_rad=0.75)
-        bpy.ops.object.editmode_toggle()
-        bpy.ops.transform.translate(value=(0, -1, 0), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-        bpy.ops.transform.translate(value=(0, -1, 0), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+        scale = 0.05
+        bpy.ops.mesh.primitive_torus_add(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), major_radius=1*scale, minor_radius=0.25*scale, abso_major_rad=1.25*scale, abso_minor_rad=0.75*scale)
+        # bpy.ops.object.editmode_toggle()
+        self.chain = True
+        link = bpy.context.active_object
+        bpy.ops.object.mode_set(mode = 'EDIT')
+        bpy.ops.mesh.select_mode(type="VERT")
+        bpy.ops.mesh.select_all(action = 'DESELECT')
+        bpy.ops.object.mode_set(mode = 'OBJECT')
+
+        verts_to_move = [0, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 283, 284, 285, 286, 287]
+
+        for i in verts_to_move:
+            link.data.vertices[i].select = True
+        bpy.ops.object.mode_set(mode = 'EDIT')
+        # bpy.ops.transform.translate(value=(0, 1, 0), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+        bpy.ops.transform.translate(value=(0*scale, 1*scale, 0*scale), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
         bpy.ops.object.editmode_toggle()
         self.rope = bpy.context.active_object
         self.rope_asymm = self.rope
         self.rope.name = self.rope_name
 
-        bpy.ops.object.empty_add(type='PLAIN_AXES', location=(0, 1.8, 0))
+        bpy.ops.object.empty_add(type='PLAIN_AXES', location=(0*scale, 1.8*scale, 0*scale))
         bpy.ops.transform.rotate(value=1.5708, orient_axis='Y', orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-        bpy.context.active_object.select_set(False)
 
-        self.rope_asymm.select_set(True)
+        bpy.context.view_layer.objects.active = self.rope
         bpy.ops.object.modifier_add(type='ARRAY')
         bpy.context.object.modifiers["Array"].use_relative_offset = False
         bpy.context.object.modifiers["Array"].use_object_offset = True
         bpy.context.object.modifiers["Array"].offset_object = bpy.data.objects["Empty"]
-
-        # bpy.ops.object.modifier_add(type='CURVE')
-        # bpy.context.object.modifiers["Curve"].object = bpy.data.objects["NurbsPath"] # FIX This
-        # bpy.context.object.modifiers["Curve"].deform_axis = 'POS_Y'
-        # bpy.context.object.modifiers["Array"].count = 20
+        self.rope_asymm.modifiers["Array"].count = 100
+        bpy.ops.object.modifier_add(type='CURVE')
+        bpy.ops.object.select_all(action='SELECT')
+        bpy.ops.object.join()
+        # self.rope = bpy.context.active_object
+        # self.rope_asymm = self.rope
+        # self.rope.name = self.rope_name
 
     def make_rigid_rope(self):
         '''
@@ -266,7 +281,11 @@ class RopeRenderer:
         '''
         Create bezier curve
         '''
-        bpy.ops.curve.primitive_bezier_curve_add(location=self.origin)
+        if self.chain:
+            bpy.ops.curve.primitive_bezier_curve_add(location=self.origin)
+            # bpy.ops.curve.primitive_nurbs_path_add(radius=1, enter_editmode=False, location=self.origin)
+        else:
+            bpy.ops.curve.primitive_bezier_curve_add(location=self.origin)
         bezier_scale = np.random.uniform(2.85, 3.02) if self.bezier_scale is None else self.bezier_scale
         bpy.ops.transform.resize(value=(bezier_scale, bezier_scale, bezier_scale))
         bpy.ops.object.mode_set(mode='EDIT')
@@ -284,22 +303,27 @@ class RopeRenderer:
         bpy.context.view_layer.objects.active = self.rope_asymm
         # Add bezier curve as deform modifier to the rope
         bpy.ops.object.modifier_add(type='CURVE')
-        self.rope_asymm.modifiers["Curve"].deform_axis = 'POS_Z'
-        self.rope_asymm.modifiers["Curve"].object = self.bezier
-        self.rope_asymm.modifiers["Curve"].show_in_editmode = True
-        self.rope_asymm.modifiers["Curve"].show_on_cage = True
-        bpy.ops.object.mode_set(mode='EDIT')
-        # Adding a curve can mess up surface normals of rope, re-point them outwards
-        bpy.ops.mesh.normals_make_consistent(inside=False)
-        bpy.ops.object.mode_set(mode='OBJECT')
+        if not self.chain:
+            self.rope_asymm.modifiers["Curve"].deform_axis = 'POS_Z'
+            self.rope_asymm.modifiers["Curve"].object = self.bezier
+            self.rope_asymm.modifiers["Curve"].show_in_editmode = True
+            self.rope_asymm.modifiers["Curve"].show_on_cage = True
+            bpy.ops.object.mode_set(mode='EDIT')
+            # Adding a curve can mess up surface normals of rope, re-point them outwards
+            bpy.ops.mesh.normals_make_consistent(inside=False)
+            bpy.ops.object.mode_set(mode='OBJECT')
+        else:
+            self.rope_asymm.modifiers["Curve"].deform_axis = 'POS_Y'
+            self.rope_asymm.modifiers["Curve"].object = self.bezier
+
 
     def make_simple_loop(self, x_offset_min, x_offset_max, y_offset_min, y_offset_max, p0=None):
         # Make simple cubic loop (4 control points)  + 2 more control points to pull slack through the loop
         #    2_______1
-        #     \  4__/ 
+        #     \  4__/
         #      \ | /\
         #       \5/__\____________
-        #       / \   | 
+        #       / \   |
         #______0   3__|
 
         if p0 == None:
@@ -481,7 +505,7 @@ class RopeRenderer:
         saved_filepath = scene.render.filepath
         scene.render.filepath = mask_filename % index
         bpy.ops.render.render(write_still=True)
-        # Clean up 
+        # Clean up
         scene.render.engine = saved
         scene.render.filepath = saved_filepath
         for node in tree.nodes:
@@ -507,16 +531,17 @@ class RopeRenderer:
                 self.clear()
                 self.add_camera()
                 self.add_light()
-                rope_texture = np.random.randint(1, 3)
-                if rope_texture == 1:
+                if i < self.num_images/2:
                     self.make_rigid_rope()
-                else:
+                elif i < 3*self.num_images/4:
                     self.make_rigid_chord()
+                else:
+                    self.make_rigid_chain()
                 if self.domain_randomize:
                     color = tuple(np.concatenate((np.random.uniform(0.8, 1, 3), np.array([1]))))
                     self.colorize(self.rope_asymm, color)
                     #self.texture_randomize(self.rope_asymm, 'rope_textures') # UNCOMMENT for randomizing rope textures
-                if self.asymmetric:
+                if self.asymmetric and not self.chain:
                     self.add_rope_asymmetry()
                 self.make_bezier()
             if self.nonplanar:
@@ -546,7 +571,7 @@ class RopeRenderer:
                 else:
                     color = tuple(np.concatenate((np.random.uniform(0.5, 1, 3), np.array([1]))))
                     self.colorize(self.table, color)
-                
+
             annot = self.render(render_path, i, self.rope_asymm, annotations=annot, num_annotations=self.num_annotations) # Render, save ground truth
         with open("./images/knots_info.json", 'w') as outfile:
             json.dump(annot, outfile, sort_keys=True, indent=2)
