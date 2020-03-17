@@ -158,6 +158,7 @@ class RopeRenderer:
         '''
         Make one long cylinder
         '''
+        self.chain=False
         bpy.ops.mesh.primitive_circle_add(location=self.origin)
         radius = np.random.uniform(0.05, 0.1)
         bpy.ops.transform.resize(value=(radius, radius, radius))
@@ -229,6 +230,7 @@ class RopeRenderer:
         '''
         Join 4 circles and "twist" them to create realistic rope (See this 5 min. tutorial: https://youtu.be/xYhIoiOnPj4 if interested)
         '''
+        self.chain=False
         bpy.ops.mesh.primitive_circle_add(location=self.origin)
         radius = np.random.uniform(0.048, 0.048) if self.rope_radius is None else self.rope_radius
         bpy.ops.transform.resize(value=(radius, radius, radius))
@@ -531,12 +533,13 @@ class RopeRenderer:
                 self.clear()
                 self.add_camera()
                 self.add_light()
-                if i < self.num_images/2:
-                    self.make_rigid_rope()
-                elif i < 3*self.num_images/4:
+                texture = random.randint(1, 4)
+                if texture == 1:
+                    self.make_rigid_chain()
+                elif texture == 2:
                     self.make_rigid_chord()
                 else:
-                    self.make_rigid_chain()
+                    self.make_rigid_rope()
                 if self.domain_randomize:
                     color = tuple(np.concatenate((np.random.uniform(0.8, 1, 3), np.array([1]))))
                     self.colorize(self.rope_asymm, color)
