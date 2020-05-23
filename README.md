@@ -19,9 +19,10 @@ All in Python3:
 ### Setup
 * After downloading Blender version 2.8, do the following steps:
 * Add the following line to your .bashrc: 
-  * `alias blender="/Users/priyasundaresan/Downloads/blender-2.80.0-git20190620.d30f72dfd8ac-x86_64/blender.app/Contents/MacOS/blender"` replacing the path to blender.app with your downloaded version
-* `cd` into the following directory: `/Users/priyasundaresan/Downloads/blender-2.80.0-git20190620.d30f72dfd8ac-x86_64/blender.app/Contents/Resources/2.80/python/bin`
-* To install dependencies, optionally make a python3 virtualenv, navigate into `rope-rendering` and run pip3 install -r requirements.txt
+  * `alias blender="/Users/priyasundaresan/Downloads/blender-2.80.0-git20190620.d30f72dfd8ac-x86_64/blender.app/Contents/MacOS/blender"` replacing the path to blender.app with your downloaded version (Note, your downloaded path to Blender might also look something like `/Applications/Blender.app/Contents/Resources/2.8/python/bin`)
+* Blender actually comes bundled with its own version of Python, separate from your system Python, so you need to install dependencies for Blender using its own Python. 
+  * To do this: `cd` into the following directory: `/path/to/blender.app/Contents/Resources/2.80/python/bin` (replace with your path to blender.app/Blender.app). From here, you might see `pip` or `pip3` listed, or if you don't see that you should see a `python3.7m`. Once in this directory, to install a Python dependency for Blender, just do `./python3.7 -m pip install [package]` or `./pip install [package]` if you see `pip` listed.
+* To install dependencies for scripts that will not be run through Blender (like post-processing renderings, for example), optionally make a python3 virtualenv, navigate into `rope-rendering` and run pip3 install -r requirements.txt
 
 ### Rendering Usage
 * Off-screen rendering: run `blender -b -P rope-blender.py` (-b signals --background, -P signals --python)
